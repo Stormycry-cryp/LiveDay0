@@ -1,0 +1,39 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local databases, dumps, and benchmark output
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+benchmark-results.json
+
+# Editors and operating-system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Private project orchestration and working notes
+AGENTS.md
+AGENTS.override.md
+BLOCKED.md
+PROGRESS.md
+memory/
+docs/product-grills/
