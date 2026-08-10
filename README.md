@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](./pyproject.toml)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](./migrations/001_initial.up.sql)
-[![Tests](https://img.shields.io/badge/Tests-19_passed-10B981?style=for-the-badge)](./docs/benchmarks/v1-local-baseline.md)
+[![Tests](https://img.shields.io/badge/Tests-22_passed-10B981?style=for-the-badge)](./docs/benchmarks/v1-public-human-recall-baseline.md)
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular_Monolith-8B5CF6?style=flat-square)
 ![Isolation](https://img.shields.io/badge/Isolation-PostgreSQL_RLS-2563EB?style=flat-square)
@@ -194,6 +194,7 @@ uv run liveday0 migrate up
 ```bash
 uv run pytest -q
 uv run python benchmarks/benchmark_recall.py
+uv run python benchmarks/public_human_recall_benchmark.py --check-sources
 ```
 
 2026 年 8 月 7 日的验收使用全新的 PostgreSQL 17.10 空库。迁移 `up / down / up` 通过，测试结果为 `19 passed` 和 `0 skipped`，验收场景 S1 到 S7 全部通过。
@@ -203,6 +204,8 @@ uv run python benchmarks/benchmark_recall.py
 默认参数采用单卡 180 tokens、整包 1600 tokens，候选、关系和最终数量分别为 48、24 和 12。本机合成样本完成 30 次召回，中位延迟为 28.62 ms，P95 为 32.19 ms，最大值为 34.91 ms。
 
 环境、样本和限制记录在 [`v1-local-baseline.md`](./docs/benchmarks/v1-local-baseline.md)。这些数字只说明当前本地合成样本的起跑位置，不能当作生产延迟承诺。
+
+2026 年 8 月 10 日新增公开真人语料基线：38 条去标识最小证据来自 13 个 Stack Exchange 公开线程，覆盖稳定上下文、变化中的现在、未完成连续性、纠正、删除、时间、噪声和跨人隔离。最终 8/8 类通过，必要项召回包 15/15，噪声、旧解释、删除复活和跨人泄漏均为 0；其中 11 项直接入上下文，4 项保留为可展开引用。来源、许可、隐私边界、原始失败和修复证据见 [`v1-public-human-recall-baseline.md`](./docs/benchmarks/v1-public-human-recall-baseline.md)。
 
 ---
 
@@ -215,11 +218,12 @@ uv run python benchmarks/benchmark_recall.py
 - 纠正、明确删除、身份候选和依赖感知局部失效
 - 固定快照、有界关系展开、完整卡片预算和失败降级
 - 可重试维护任务、版本冲突保护和成对 SQL 迁移
+- 公开真人最小证据数据集、source-safe split、来源/许可/PII 审计和八类确定性召回 benchmark
 
 ## 还缺证据的部分
 
 - pgvector 候选质量和性能，当前基准镜像没有安装该扩展
-- 真实生活样本上的长期相关率、记忆自然度和关系连续性
+- 更大规模、多语言和长期关系样本上的相关率、记忆自然度与直接上下文覆盖率
 - 长期图规模、维护积压和生产负载下的容量结论
 - 常驻 worker、生产级调度、监控和告警
 - HTTP 服务、认证授权、生产部署和多设备拓扑
@@ -232,7 +236,7 @@ uv run python benchmarks/benchmark_recall.py
 ## 接下来可以验证什么
 
 1. 在带 pgvector 的隔离环境复测候选质量、延迟和降级过程。
-2. 建立去标识化的真实生活样本集，评估相关历史、空召回、纠正和关系连续性。
+2. 在同样的许可和去标识边界下扩充多语言、长时间跨度的公开真人样本，单独评估直接上下文覆盖率。
 3. 验证长期数据量下的索引、关系展开和维护积压，再决定是否需要物理拆分。
 4. 增加生产服务边界、认证租户建立、worker 调度和可观测性。
 5. 等前面的纵向流程稳定后，再扩展慢速人物与关系理解，以及可以修正的人生章节。
@@ -260,6 +264,9 @@ LiveDay0/
 │   └── cli.py
 ├── tests/
 ├── benchmarks/
+│   ├── public_human_recall/
+│   ├── public_human_recall_benchmark.py
+│   └── results/
 └── docs/
     ├── v1-design/
     └── benchmarks/

@@ -472,18 +472,27 @@ class RecallCompiler:
         query = query.strip().lower()
         if not query:
             return 0.0
-        text = json.dumps(body, ensure_ascii=False, default=str).lower()
+        text = RecallCompiler._searchable_values(body).lower()
         score = 4.0 if query in text else 0.0
         terms = {term for term in re.split(r"[\s,，。！？!?；;：:]+", query) if term}
         for term in terms:
             if term in text:
                 score += min(2.0, 0.5 + len(term) / 4)
-            elif len(term) >= 3:
+            elif len(term) >= 3 and re.search(r"[\u3400-\u9fff]", term):
                 bigrams = {term[i : i + 2] for i in range(len(term) - 1)}
                 matched = sum(1 for gram in bigrams if gram in text)
-                if matched >= 2 and matched / len(bigrams) >= 0.5:
+                if matched >= 2:
                     score += matched * 0.2
         return score
+
+    @classmethod
+    def _searchable_values(cls, value: Any) -> str:
+        """Index semantic values without letting schema keys create false matches."""
+        if isinstance(value, dict):
+            return " ".join(cls._searchable_values(item) for item in value.values())
+        if isinstance(value, (list, tuple, set)):
+            return " ".join(cls._searchable_values(item) for item in value)
+        return str(value)
 
     def _fit_card(self, card: dict[str, Any], limit: int) -> dict[str, Any] | None:
         if self._tokens(card) <= limit:
@@ -504,12 +513,18 @@ class RecallCompiler:
             return None
         if card_type not in ESSENTIAL_FIELDS or "body" not in card:
             return None
-        shortened = {key: value for key, value in card.items() if key not in {"body", "sources"}}
-        if "sources" in card:
-            shortened["sources"] = [
-                {"evidence_id": source["evidence_id"], "role": source["role"]}
-                for source in card["sources"]
-            ]
+        shortened = {
+            key: card[key]
+            for key in ("id", "type", "lifecycle", "epistemic_state", "valid_at", "version")
+            if key in card
+        }
+        shortened["source_refs"] = [
+            {"evidence_id": source["evidence_id"], "role": source["role"]}
+            for source in card.get("sources", [])
+        ]
+        if card.get("pending"):
+            shortened["pending"] = True
+            shortened["pending_source_ids"] = card.get("pending_source_ids", [])
         shortened["body"] = {
             key: card["body"][key]
             for key in ESSENTIAL_FIELDS[card_type]

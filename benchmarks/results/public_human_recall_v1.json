@@ -1,0 +1,89 @@
+{
+  "schema_version": "public-human-recall-v1",
+  "generated_at": "2026-08-10T12:41:56+08:00",
+  "dataset_audit": {
+    "passed": true,
+    "record_count": 38,
+    "source_group_count": 13,
+    "unique_public_items": 24,
+    "source_distribution": {
+      "The Workplace": 20,
+      "Bicycles": 9,
+      "Seasoned Advice": 9
+    },
+    "split_distribution": {
+      "train": 5,
+      "dev": 15,
+      "test": 18
+    },
+    "epistemic_distribution": {
+      "confirmed": 24,
+      "assumption": 3,
+      "to_validate": 11
+    },
+    "license_distribution": {
+      "CC BY-SA 4.0": 38
+    },
+    "source_safe_split": true,
+    "pii_contact_hits": 0,
+    "high_sensitivity_hits": 0,
+    "near_duplicate_pairs": 0,
+    "live_source_items_available": 24,
+    "live_source_items_missing": 0
+  },
+  "unmodified_v1_baseline": {
+    "cases_passed": 2,
+    "case_count": 8,
+    "required_hits": 7,
+    "required_items": 15,
+    "required_recall": 0.4667,
+    "failures": {
+      "missed_required": 8,
+      "noise_intrusion": 2,
+      "stale_superseded": 0,
+      "deleted_resurrection": 0,
+      "cross_person_leak": 0
+    }
+  },
+  "final_baseline": {
+    "engine": "LiveDay0 MemoryService.recall",
+    "paid_provider_calls": 0,
+    "query_embeddings": false,
+    "cases_passed": 8,
+    "case_count": 8,
+    "required_hits": 15,
+    "required_items": 15,
+    "required_envelope_recall": 1.0,
+    "direct_context_hits": 11,
+    "direct_context_recall": 0.7333,
+    "expansion_handle_hits": 4,
+    "failures": {
+      "missed_required": 0,
+      "noise_intrusion": 0,
+      "stale_superseded": 0,
+      "deleted_resurrection": 0,
+      "cross_person_leak": 0,
+      "epistemic_collapse": 0,
+      "source_boundary_violation": 0
+    },
+    "passed": true
+  },
+  "thresholds": {
+    "required_envelope_recall_min": 0.9,
+    "all_eight_categories_must_pass": true,
+    "noise_intrusions_max": 0,
+    "stale_superseded_max": 0,
+    "deleted_resurrections_max": 0,
+    "cross_person_leaks_max": 0
+  },
+  "cases": [
+    {"case_id":"stable_shared_bicycle","category":"stable_context","required_hits":2,"required_items":2,"direct_context_hits":1,"expansion_handle_hits":1,"passed":true},
+    {"case_id":"current_internship_distraction","category":"changing_present","required_hits":3,"required_items":3,"direct_context_hits":2,"expansion_handle_hits":1,"passed":true},
+    {"case_id":"unfinished_noodle_method","category":"unfinished_continuity","required_hits":2,"required_items":2,"direct_context_hits":2,"expansion_handle_hits":0,"passed":true},
+    {"case_id":"post_interview_correction","category":"correction_override","required_hits":1,"required_items":1,"direct_context_hits":0,"expansion_handle_hits":1,"passed":true},
+    {"case_id":"project_turning_point","category":"temporal_relevance","required_hits":2,"required_items":2,"direct_context_hits":1,"expansion_handle_hits":1,"passed":true},
+    {"case_id":"repair_source_deletion","category":"deletion_propagation","required_hits":2,"required_items":2,"direct_context_hits":2,"expansion_handle_hits":0,"passed":true},
+    {"case_id":"tea_conflict_noise","category":"noise_suppression","required_hits":1,"required_items":1,"direct_context_hits":1,"expansion_handle_hits":0,"passed":true},
+    {"case_id":"team_decision_person_isolation","category":"cross_person_isolation","required_hits":2,"required_items":2,"direct_context_hits":2,"expansion_handle_hits":0,"passed":true}
+  ]
+}
