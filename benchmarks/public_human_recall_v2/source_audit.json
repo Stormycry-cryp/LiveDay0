@@ -1,0 +1,137 @@
+{
+  "schema_version": "public-human-source-audit-v2",
+  "checked_at": "2026-08-10T08:17:02+00:00",
+  "user_agent": "LiveDay0-public-human-benchmark-v2/1.0 (research; minimal evidence; no profiles)",
+  "checks": [
+    {
+      "family": "wikimedia",
+      "operator": "Wikimedia Foundation",
+      "license": "CC BY-SA 4.0",
+      "terms_url": "https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use",
+      "terms_retrieved": true,
+      "terms_sha256": "b1ad4e7104ce31151d2634b154dc39df756c51ca6c88d8673c661d7c48d9184d",
+      "robots": [],
+      "collection_enabled": true,
+      "boundary": "Public talk-page revision summaries only; exclude bots, usernames, profiles, page bodies, deleted revisions, contacts, minors, and high-sensitivity content."
+    },
+    {
+      "family": "fedora_discussion",
+      "operator": "Fedora Project",
+      "license": "CC BY-SA 4.0",
+      "terms_url": "https://discussion.fedoraproject.org/tos",
+      "terms_retrieved": true,
+      "terms_sha256": "5301fb7c0d621397e11a468f526c8552335a8d684d16caacf1d1f9fa4575594b",
+      "robots": [
+        {
+          "url": "https://discussion.fedoraproject.org/robots.txt",
+          "sha256": "f91634a0c08a77bb4a13d76e4ae0205b9efa4866eaad19363b4bf050c4313317",
+          "access_url": "https://discussion.fedoraproject.org/posts.json",
+          "allowed_for_user_agent": true
+        }
+      ],
+      "collection_enabled": true,
+      "boundary": "Public visible posts only; no login, search, user/profile endpoints, private categories, deleted posts, usernames, quoted profiles, contacts, minors, or high-sensitivity content."
+    },
+    {
+      "family": "zcash_forum",
+      "operator": "Zcash Community Forum",
+      "license": "CC BY-SA 4.0",
+      "terms_url": "https://forum.zcashcommunity.com/tos",
+      "terms_retrieved": true,
+      "terms_sha256": "151fbe2e6e330d87332c0f86f063c55f103a97ceba82eac8ca47609bd5d36d23",
+      "robots": [
+        {
+          "url": "https://forum.zcashcommunity.com/robots.txt",
+          "sha256": "92811c9bc69c879a58b77b922e3c8af000c3bc96620f476a96a7eddb437265a5",
+          "access_url": "https://forum.zcashcommunity.com/posts.json",
+          "allowed_for_user_agent": true
+        }
+      ],
+      "collection_enabled": true,
+      "boundary": "Public visible posts only; exclude financial discussion and identifiers entirely, plus login/private/deleted content, usernames, profiles, contacts, minors, and all high-sensitivity material."
+    },
+    {
+      "family": "stackexchange_v1_frozen",
+      "operator": "Stack Exchange",
+      "license": "CC BY-SA 4.0",
+      "terms_url": "https://stackoverflow.com/legal/terms-of-service/public",
+      "terms_retrieved": false,
+      "terms_sha256": null,
+      "robots": [],
+      "collection_enabled": false,
+      "boundary": "Carry forward only the 38 already-audited minimal excerpts. Current automated-access restrictions prohibit using Stack Exchange as the v2 scale source.",
+      "audit_note": "No v2 request was made. The frozen v1 source/license audit is retained, and current policy prevents scale collection."
+    }
+  ],
+  "passed": true,
+  "collection": {
+    "target_distribution": {
+      "wikimedia_zh": 3000,
+      "wikimedia_en": 3000,
+      "wikimedia_es": 10500,
+      "fedora_discussion": 2050,
+      "zcash_forum": 1300
+    },
+    "actual_family_distribution": {
+      "fedora_discussion": 2043,
+      "stackexchange_v1_frozen": 38,
+      "wikimedia": 6656,
+      "zcash_forum": 1295
+    },
+    "dataset_sha256": "07c285c580dcf84a8b9c02cec992230d5c32966a8e6d9eeaa24ad4fdbf030404",
+    "dataset_audit": {
+      "passed": true,
+      "errors": [],
+      "threshold_failures": [],
+      "thresholds": {
+        "records_min": 10000,
+        "source_groups_min": 1000,
+        "source_families_min": 4,
+        "languages_min": 3,
+        "required_languages": [
+          "zh",
+          "en"
+        ],
+        "domains_min": 12
+      },
+      "record_count": 10032,
+      "source_group_count": 5587,
+      "source_family_distribution": {
+        "fedora_discussion": 2043,
+        "stackexchange_v1_frozen": 38,
+        "wikimedia": 6656,
+        "zcash_forum": 1295
+      },
+      "language_distribution": {
+        "en": 3700,
+        "es": 5658,
+        "zh": 674
+      },
+      "domain_distribution": {
+        "change_transition": 257,
+        "creative_expression": 608,
+        "decision_preference": 57,
+        "home_food": 59,
+        "learning": 54,
+        "maintenance_repair": 1450,
+        "planning_future": 275,
+        "relationship_community": 5781,
+        "routine_habit": 36,
+        "task_project": 961,
+        "travel_place": 145,
+        "work": 349
+      },
+      "split_distribution": {
+        "heldout": 1717,
+        "test": 1532,
+        "train": 6783
+      },
+      "source_group_split_leaks": {},
+      "subject_split_leaks": {},
+      "pii_high_sensitivity_minor_hits": 0,
+      "exact_duplicate_count": 0,
+      "near_duplicate_count": 0,
+      "near_duplicate_sample": []
+    }
+  }
+}

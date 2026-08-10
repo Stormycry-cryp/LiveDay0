@@ -40,6 +40,6 @@ Run the local audit without a database:
 uv run python benchmarks/public_human_recall_benchmark.py --audit-only
 ```
 
-Add `--check-sources` to verify current item availability through Stack Exchange API v2.3. The check stops if the API returns a backoff instruction.
+The 2026-08-10 v1 acceptance used `--check-sources` through Stack Exchange API v2.3 and saved the result. Do not repeat that network check for v2 or routine local validation: current automated-access policy is not compatible with scale benchmarking. Re-evaluate the current terms first if a future legal/access review explicitly reopens it.
 
 To honor a source withdrawal or boundary change, search the exact `source_id` or `source_group`, remove every matching JSONL record and affected case, and add only a content-free removal note to the project change history. Do not retain the excerpt in a tombstone or correction history. Re-run the audit to prove there is no split residue, duplicate, contact/PII hit, or dangling case. The runtime deletion case separately proves propagation from evidence through canonical cards, derived projections, snapshots, and content-free deletion markers.

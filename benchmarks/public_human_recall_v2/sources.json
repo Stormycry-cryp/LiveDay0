@@ -1,0 +1,50 @@
+[
+  {
+    "family": "wikimedia",
+    "operator": "Wikimedia Foundation",
+    "languages": ["zh", "en", "es"],
+    "license": "CC BY-SA 4.0",
+    "terms_url": "https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use",
+    "api_documentation_url": "https://meta.wikimedia.org/wiki/Data_dumps",
+    "robots_urls": [],
+    "access_method": "Official Wikimedia stub-meta-history dumps, Talk namespace only",
+    "collection_boundary": "Public talk-page revision summaries only; exclude bots, usernames, profiles, page bodies, deleted revisions, contacts, minors, and high-sensitivity content."
+  },
+  {
+    "family": "fedora_discussion",
+    "operator": "Fedora Project",
+    "languages": ["en"],
+    "license": "CC BY-SA 4.0",
+    "terms_url": "https://discussion.fedoraproject.org/tos",
+    "api_documentation_url": "https://docs.discourse.org/",
+    "robots_urls": ["https://discussion.fedoraproject.org/robots.txt"],
+    "access_method": "Public Discourse /posts.json endpoint",
+    "collection_boundary": "Public visible posts only; no login, search, user/profile endpoints, private categories, deleted posts, usernames, quoted profiles, contacts, minors, or high-sensitivity content."
+  },
+  {
+    "family": "zcash_forum",
+    "operator": "Zcash Community Forum",
+    "languages": ["en"],
+    "license": "CC BY-SA 4.0",
+    "terms_url": "https://forum.zcashcommunity.com/tos",
+    "api_documentation_url": "https://docs.discourse.org/",
+    "robots_urls": ["https://forum.zcashcommunity.com/robots.txt"],
+    "access_method": "Public Discourse /posts.json endpoint",
+    "collection_boundary": "Public visible posts only; exclude financial discussion and identifiers entirely, plus login/private/deleted content, usernames, profiles, contacts, minors, and all high-sensitivity material."
+  },
+  {
+    "family": "stackexchange_v1_frozen",
+    "operator": "Stack Exchange",
+    "languages": ["en"],
+    "license": "CC BY-SA 4.0",
+    "terms_url": "https://stackoverflow.com/legal/terms-of-service/public",
+    "api_documentation_url": "https://api.stackexchange.com/docs",
+    "robots_urls": [
+      "https://workplace.stackexchange.com/robots.txt",
+      "https://bicycles.stackexchange.com/robots.txt",
+      "https://cooking.stackexchange.com/robots.txt"
+    ],
+    "access_method": "Frozen v1 records collected through the official API on 2026-08-10; no v2 network collection",
+    "collection_boundary": "Carry forward only the 38 already-audited minimal excerpts. Current automated-access restrictions prohibit using Stack Exchange as the v2 scale source."
+  }
+]

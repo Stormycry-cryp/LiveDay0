@@ -58,22 +58,48 @@ class RecallCompiler:
                 degraded.append("vector_candidate_timeout")
 
             fts_card_ids = self._fts_card_ids(conn, query, options.candidate_limit)
+            lexical_card_ids = self._lexical_card_ids(conn, query, options.candidate_limit)
             vector_card_ids = self._vector_card_ids(conn, options, degraded)
-            cards = conn.execute(
-                """
-                SELECT c.*, v.body
-                FROM semantic_cards c
-                JOIN semantic_card_versions v
-                  ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
-                WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
-                ORDER BY c.valid_at DESC, c.id
-                LIMIT %s
-                """,
-                (self.tenant_id, options.candidate_limit),
-            ).fetchall()
+            targeted_ids = list(dict.fromkeys(fts_card_ids + lexical_card_ids + vector_card_ids))[
+                : options.candidate_limit
+            ]
+            cards = []
+            if targeted_ids:
+                targeted_rows = conn.execute(
+                    """
+                    SELECT c.*, v.body
+                    FROM semantic_cards c
+                    JOIN semantic_card_versions v
+                      ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
+                    WHERE c.tenant_id=%s AND c.id = ANY(%s)
+                      AND c.lifecycle IN ('active','provisional')
+                    """,
+                    (self.tenant_id, targeted_ids),
+                ).fetchall()
+                targeted_by_id = {row["id"]: row for row in targeted_rows}
+                cards.extend(targeted_by_id[card_id] for card_id in targeted_ids if card_id in targeted_by_id)
+            remaining = options.candidate_limit - len(cards)
+            if remaining > 0:
+                cards.extend(
+                    conn.execute(
+                        """
+                        SELECT c.*, v.body
+                        FROM semantic_cards c
+                        JOIN semantic_card_versions v
+                          ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
+                        WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
+                          AND NOT (c.id = ANY(%s))
+                        ORDER BY c.valid_at DESC, c.id
+                        LIMIT %s
+                        """,
+                        (self.tenant_id, targeted_ids, remaining),
+                    ).fetchall()
+                )
             source_map = self._source_map(conn, [row["id"] for row in cards])
             scored: list[tuple[float, dict]] = []
             for row in cards:
+                if row["body"].get("applicability") == "excluded_from_personal_continuity":
+                    continue
                 score = self._relevance(query, row["body"])
                 if row["id"] in fts_card_ids:
                     score += 2.0
@@ -221,30 +247,68 @@ class RecallCompiler:
                 raise NotFound("item is not in the pinned expansion envelope")
             return item
 
-    def _fts_card_ids(self, conn, query: str, limit: int) -> set[UUID]:
+    def _fts_card_ids(self, conn, query: str, limit: int) -> list[UUID]:
         if not query.strip():
-            return set()
+            return []
         rows = conn.execute(
             """
-            SELECT DISTINCT cs.card_id
+            SELECT cs.card_id, max(ts_rank_cd(e.search_vector, plainto_tsquery('simple', %s))) AS rank
             FROM evidence e
             JOIN card_sources cs ON cs.tenant_id=e.tenant_id AND cs.evidence_id=e.id
             WHERE e.tenant_id=%s AND e.status='active'
               AND e.search_vector @@ plainto_tsquery('simple', %s)
+            GROUP BY cs.card_id
+            ORDER BY rank DESC, cs.card_id
             LIMIT %s
             """,
-            (self.tenant_id, query, limit),
+            (query, self.tenant_id, query, limit),
         ).fetchall()
-        return {row["card_id"] for row in rows}
+        return [row["card_id"] for row in rows]
+
+    def _lexical_card_ids(self, conn, query: str, limit: int) -> list[UUID]:
+        """Candidate fallback for CJK and mixed-language cues not handled by simple FTS."""
+        lowered = query.strip().lower()
+        if not lowered:
+            return []
+        fragments = [
+            token
+            for token in re.findall(r"[a-z0-9][a-z0-9'-]{2,}", lowered)
+            if token not in {"current", "actual", "ongoing", "matter", "next", "future", "still", "continues", "time", "longer"}
+        ]
+        for run in re.findall(r"[\u3400-\u9fff]{2,}", lowered):
+            fragments.extend(run[index : index + 2] for index in range(len(run) - 1))
+        patterns = [f"%{fragment}%" for fragment in dict.fromkeys(fragments) if fragment]
+        if not patterns:
+            return []
+        rows = conn.execute(
+            """
+            SELECT cs.card_id, e.content
+            FROM evidence e
+            JOIN card_sources cs ON cs.tenant_id=e.tenant_id AND cs.evidence_id=e.id
+            WHERE e.tenant_id=%s AND e.status='active' AND e.content ILIKE ANY(%s)
+            """,
+            (self.tenant_id, patterns),
+        ).fetchall()
+        scores: dict[UUID, int] = {}
+        for row in rows:
+            content = (row["content"] or "").lower()
+            scores[row["card_id"]] = max(
+                scores.get(row["card_id"], 0),
+                sum(fragment in content for fragment in fragments),
+            )
+        return [
+            card_id
+            for card_id, _ in sorted(scores.items(), key=lambda item: (item[1], str(item[0])), reverse=True)[:limit]
+        ]
 
     def _vector_card_ids(
         self,
         conn,
         options: RecallOptions,
         degraded: list[str],
-    ) -> set[UUID]:
+    ) -> list[UUID]:
         if options.simulate_vector_timeout or options.query_embedding is None:
-            return set()
+            return []
         if len(options.query_embedding) != 8:
             raise ValueError("v1 query embeddings must contain exactly 8 dimensions")
         vector_available = conn.execute(
@@ -252,7 +316,7 @@ class RecallCompiler:
         ).fetchone()["value"]
         if not vector_available:
             degraded.append("vector_extension_unavailable")
-            return set()
+            return []
         literal = "[" + ",".join(str(value) for value in options.query_embedding) + "]"
         rows = conn.execute(
             """
@@ -264,7 +328,7 @@ class RecallCompiler:
             """,
             (literal, self.tenant_id, options.candidate_limit),
         ).fetchall()
-        return {row["card_id"] for row in rows}
+        return [row["card_id"] for row in rows]
 
     def _source_map(self, conn, card_ids: list[UUID]) -> dict[UUID, list[dict[str, Any]]]:
         if not card_ids:

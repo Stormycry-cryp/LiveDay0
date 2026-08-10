@@ -50,12 +50,13 @@
 ```bash
 export LIVEDAY0_DATABASE_URL="postgresql://postgres:<local-password>@127.0.0.1:55433/liveday0"
 
-uv run python benchmarks/public_human_recall_benchmark.py --audit-only --check-sources
-uv run python benchmarks/public_human_recall_benchmark.py --check-sources
+uv run python benchmarks/public_human_recall_benchmark.py --audit-only
 uv run python benchmarks/benchmark_recall.py
 uv run pytest -q tests/test_public_human_recall_benchmark.py
 uv run pytest -q
 ```
+
+在线 API 复核是 2026-08-10 的历史验收证据，不是当前建议复跑项；后续自动化访问需先重新审核 Stack Exchange 的现行政策。
 
 ## 限制与下一步
 
