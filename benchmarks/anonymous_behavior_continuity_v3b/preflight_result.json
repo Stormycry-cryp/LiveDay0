@@ -1,0 +1,196 @@
+{
+  "all_sources_pass": false,
+  "freeze_allowed": false,
+  "raw_or_source_identifiers_in_output": false,
+  "rules_frozen_before_source_inspection": {
+    "maximum_selected_fraction_per_signature": 0.5,
+    "minimum_exact_signature_k": 5,
+    "minimum_span_days": 90,
+    "near_duplicate_threshold": 0.9,
+    "slots": 20
+  },
+  "schema_version": "anonymous-behavior-preflight-v3b",
+  "sources": {
+    "electricity_load_diagrams": {
+      "archive": {
+        "byte_size": 261335609,
+        "sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1",
+        "zip_members": [
+          "LD2011_2014.txt",
+          "__MACOSX/",
+          "__MACOSX/._LD2011_2014.txt"
+        ]
+      },
+      "base_eligible_entities_90d_20windows": 370,
+      "ephemeral_client_count": 370,
+      "metadata": {
+        "dataset_doi": "10.24432/C58C86",
+        "last_updated": "Fri Mar 13 2015",
+        "metadata_sha256": "b2dcc4da3b2bb104f2bab064bdf5f1da280fb2446a1a9d464f4319963023f56f",
+        "name": "ElectricityLoadDiagrams20112014",
+        "repository_url": "https://archive.ics.uci.edu/dataset/321/electricityloaddiagrams20112014",
+        "uci_id": 321
+      },
+      "preflight_pass": false,
+      "privacy": {
+        "candidate_signature_count": 121,
+        "k_anonymous_entity_count": 233,
+        "k_anonymous_signature_count": 7,
+        "maximum_k": 176,
+        "maximum_near_duplicate_signature_component": 2,
+        "median_k": 11,
+        "membership_inference_prior_ceiling": null,
+        "minimum_k": 5,
+        "near_duplicate_mask_groups": 5,
+        "privacy_capacity_at_max_50pct_per_signature": 115,
+        "quota": 180,
+        "quota_pass": false
+      },
+      "quota": 180,
+      "schema": {
+        "anonymous_client_columns": 370,
+        "retained_columns": [
+          "relative_slot",
+          "load_state_relative_to_entity_median"
+        ],
+        "timestamp_column": "\"\""
+      },
+      "source_rows": 140256
+    },
+    "online_retail_ii": {
+      "archive": {
+        "byte_size": 45622418,
+        "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+        "zip_members": [
+          "online_retail_II.xlsx"
+        ]
+      },
+      "base_eligible_entities_90d_20windows": 52,
+      "ephemeral_customer_count": 5942,
+      "metadata": {
+        "dataset_doi": "10.24432/C5CG6D",
+        "last_updated": "Fri Jan 05 2024",
+        "metadata_sha256": "ada567e65f3d9481518ad7228da51860c2d5f45dfa6c7efebee8196853735c78",
+        "name": "Online Retail II",
+        "repository_url": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+        "uci_id": 502
+      },
+      "preflight_pass": false,
+      "privacy": {
+        "candidate_signature_count": 48,
+        "k_anonymous_entity_count": 5,
+        "k_anonymous_signature_count": 1,
+        "maximum_k": 5,
+        "maximum_near_duplicate_signature_component": 1,
+        "median_k": 5,
+        "membership_inference_prior_ceiling": null,
+        "minimum_k": 5,
+        "near_duplicate_mask_groups": 0,
+        "privacy_capacity_at_max_50pct_per_signature": 2,
+        "quota": 300,
+        "quota_pass": false
+      },
+      "quota": 300,
+      "schema": {
+        "Year 2009-2010": [
+          "Invoice",
+          "StockCode",
+          "Description",
+          "Quantity",
+          "InvoiceDate",
+          "Price",
+          "Customer ID",
+          "Country"
+        ],
+        "Year 2010-2011": [
+          "Invoice",
+          "StockCode",
+          "Description",
+          "Quantity",
+          "InvoiceDate",
+          "Price",
+          "Customer ID",
+          "Country"
+        ]
+      },
+      "source_rows": 1067371,
+      "usable_customer_rows": 824364
+    },
+    "oulad": {
+      "archive": {
+        "byte_size": 46748244,
+        "sha256": "f2ed1902616c1fe8d2824d872c0b7d2d72be435bf0124d077044fe4be2c6d3e4",
+        "zip_members": [
+          "OULAD.names",
+          "assessments.csv",
+          "courses.csv",
+          "studentAssessment.csv",
+          "studentInfo.csv",
+          "studentRegistration.csv",
+          "studentVle.csv",
+          "vle.csv"
+        ]
+      },
+      "base_eligible_entities_90d_20windows": 2615,
+      "ephemeral_35_plus_source_keys": 9649,
+      "metadata": {
+        "dataset_doi": "10.24432/C5KK69",
+        "last_updated": "Mon Dec 21 2015",
+        "metadata_sha256": "079799e66dec01a31b211709750f48667da88476551258393bbfef2def49c874",
+        "name": "Open University Learning Analytics dataset",
+        "repository_url": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+        "uci_id": 349
+      },
+      "preflight_pass": false,
+      "privacy": {
+        "candidate_signature_count": 2344,
+        "k_anonymous_entity_count": 207,
+        "k_anonymous_signature_count": 11,
+        "maximum_k": 47,
+        "maximum_near_duplicate_signature_component": 5,
+        "median_k": 12,
+        "membership_inference_prior_ceiling": null,
+        "minimum_k": 5,
+        "near_duplicate_mask_groups": 7,
+        "privacy_capacity_at_max_50pct_per_signature": 100,
+        "quota": 120,
+        "quota_pass": false
+      },
+      "quota": 120,
+      "retained_35_plus_rows": 3918886,
+      "schema": {
+        "studentInfo": [
+          "code_module",
+          "code_presentation",
+          "id_student",
+          "gender",
+          "region",
+          "highest_education",
+          "imd_band",
+          "age_band",
+          "num_of_prev_attempts",
+          "studied_credits",
+          "disability",
+          "final_result"
+        ],
+        "studentVle": [
+          "code_module",
+          "code_presentation",
+          "id_student",
+          "id_site",
+          "date",
+          "sum_click"
+        ],
+        "vle": [
+          "id_site",
+          "code_module",
+          "code_presentation",
+          "activity_type",
+          "week_from",
+          "week_to"
+        ]
+      },
+      "source_rows": 10655280
+    }
+  }
+}
