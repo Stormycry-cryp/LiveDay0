@@ -112,3 +112,19 @@ The candidate result SHA-256 is
 Heldout was neither parsed nor run by the candidate runner. Code and parameters
 are locked on test; a one-time heldout run requires the next explicit
 control-plane confirmation.
+
+## Heldout harness gate
+
+A deterministic harness is prepared but has not executed heldout. The direct
+runner remains test-only; the wrapper defaults to test and requires the exact
+`--run-heldout-once` flag plus the non-existing canonical output path. Before
+any case is loaded it verifies the locked candidate SHA and the selected
+artifact SHA-256/byte size against the frozen manifest. The heldout plan uses
+train+heldout observations only and no synthetic test mechanics. Case-level
+rows are omitted from heldout stdout and the result artifact; aggregate metrics
+and frozen input identities remain.
+
+The locked candidate parameters remain candidate/relation/final/context limits
+64/24/10/1600. No recall source file or frozen data, case, label, window,
+privacy, split, or source artifact changed. A separate control-plane approval
+is still required before the documented one-time command may run.

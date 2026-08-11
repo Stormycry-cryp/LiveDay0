@@ -41,3 +41,31 @@ The locked test-only candidate is `results/candidate_test_locked.json`. It adds
 an explicit recall `as_of` cutoff and normalizes English possessive anchors; it
 does not change frozen data, cases, labels, windows, privacy gates, candidate or
 final limits. Heldout remains sealed pending control-plane confirmation.
+
+## Deterministic heldout harness
+
+`heldout_harness.py` is a split selector around the same artifact audit and
+`run_benchmark` implementation. With no split flag it remains on test:
+
+```bash
+python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness --audit-only
+```
+
+Heldout requires the distinct `--run-heldout-once` flag and a new output path:
+
+```bash
+python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness \
+  --run-heldout-once \
+  --output benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.json
+```
+
+That exact output path is mandatory, and the command must not run until
+separately authorized after the harness commit is locked. The selector verifies
+the locked test candidate SHA, manifest hash, and sealed case SHA-256/byte size
+before parsing. It uses only train+heldout observations, does not load the
+frozen synthetic test mechanics, refuses to overwrite an existing result, and
+removes case-level records from heldout stdout/artifacts. The aggregate result
+carries split, case artifact/hash/bytes, manifest hash, candidate hash, and the
+locked recall commit/tree. Synthetic intrusion and deletion metrics are
+therefore reported from the locked test candidate, not re-evaluated or mixed
+into the heldout person split.

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Run the unchanged LiveDay0 recall engine on the frozen v3b Pilot test split.
+"""Shared frozen v3b Pilot evaluation logic; the direct CLI remains test-only.
 
-The heldout case file is never parsed by this runner. Its frozen byte hash is
-verified against the manifest and remains sealed until recall code is frozen.
+Heldout selection is available only through ``heldout_harness`` after explicit
+authorization and byte-identity verification. The direct runner CLI never
+selects or parses heldout cases.
 """
 
 from __future__ import annotations
@@ -181,11 +182,18 @@ def cleanup_tenants(tenants: Iterable[UUID]) -> None:
         conn.execute("DELETE FROM tenants WHERE id = ANY(%s)", (list(tenants),))
 
 
-def run_scale(scale: int) -> dict[str, Any]:
+def run_scale(
+    scale: int,
+    *,
+    case_path: Path = TEST_CASES_PATH,
+    observation_splits: frozenset[str] = frozenset({"train", "test"}),
+    synthetic_case_path: Path | None = SYNTHETIC_CASES_PATH,
+    include_case_details: bool = True,
+) -> dict[str, Any]:
     entities = load_jsonl(ENTITIES_PATH)
-    observations = [row for row in load_jsonl(OBSERVATIONS_PATH) if row["split"] in {"train", "test"}]
-    real_cases = load_jsonl(TEST_CASES_PATH)
-    synthetic_cases = load_jsonl(SYNTHETIC_CASES_PATH)
+    observations = [row for row in load_jsonl(OBSERVATIONS_PATH) if row["split"] in observation_splits]
+    real_cases = load_jsonl(case_path)
+    synthetic_cases = load_jsonl(synthetic_case_path) if synthetic_case_path is not None else []
     entity_by_id = {row["entity_id"]: row for row in entities}
     observation_by_id = {row["observation_id"]: row for row in observations}
 
@@ -425,16 +433,24 @@ def run_scale(scale: int) -> dict[str, Any]:
             }
         return output
 
-    failures = {
+    failures: dict[str, int | None] = {
         "missed_required_at_10": expected_total - sum(result["hit_at_10"] for result in retrieval),
-        "synthetic_mechanics_missed_required_at_10": synthetic_expected_total - synthetic_hit_total,
+        "synthetic_mechanics_missed_required_at_10": (
+            synthetic_expected_total - synthetic_hit_total if synthetic_results else None
+        ),
         "future_evidence_leakage": sum(result["future_hits"] for result in results + synthetic_results),
         "cross_entity_tenant_leakage": sum(result["cross_tenant_hits"] for result in results + synthetic_results),
-        "synthetic_forbidden_intrusion": sum(len(result["forbidden_hits"]) for result in synthetic_results),
-        "deletion_resurrection": sum(
-            len(result["forbidden_hits"])
-            for result in synthetic_results
-            if result["category"] == "deletion_propagation"
+        "synthetic_forbidden_intrusion": (
+            sum(len(result["forbidden_hits"]) for result in synthetic_results) if synthetic_results else None
+        ),
+        "deletion_resurrection": (
+            sum(
+                len(result["forbidden_hits"])
+                for result in synthetic_results
+                if result["category"] == "deletion_propagation"
+            )
+            if synthetic_results
+            else None
         ),
     }
     output = {
@@ -462,11 +478,18 @@ def run_scale(scale: int) -> dict[str, Any]:
         "time_segment_continuity_at_10": round(
             sum(result["hit_at_10"] for result in continuity) / max(1, sum(result["expected_count"] for result in continuity)), 4
         ),
-        "synthetic_mechanics": {
-            "required_recall_at_10": round(synthetic_hit_total / synthetic_expected_total, 4),
-            "passed_cases": synthetic_passed,
-            "pass_rate": round(synthetic_passed / len(synthetic_results), 4),
-        },
+        "synthetic_mechanics": (
+            {
+                "required_recall_at_10": round(synthetic_hit_total / synthetic_expected_total, 4),
+                "passed_cases": synthetic_passed,
+                "pass_rate": round(synthetic_passed / len(synthetic_results), 4),
+            }
+            if synthetic_results
+            else {
+                "evaluated": False,
+                "reason": "synthetic mechanics are frozen test-only cases",
+            }
+        ),
         "latency_ms": {
             "median": round(statistics.median(latency_values), 3),
             "p95": round(percentile(latency_values, 0.95), 3),
@@ -480,10 +503,76 @@ def run_scale(scale: int) -> dict[str, Any]:
         "real_metrics_by_language": grouped(results, "language"),
         "real_metrics_by_source": grouped(results, "source_family"),
         "synthetic_metrics_by_category": grouped(synthetic_results, "category"),
-        "passed": metrics["recall_at_10"] == 1.0 and not any(failures.values()),
-        "cases": results + synthetic_results,
+        "passed": metrics["recall_at_10"] == 1.0
+        and not any(value for value in failures.values() if value is not None),
     }
+    if include_case_details:
+        output["cases"] = results + synthetic_results
     cleanup_tenants([tenant, isolation_tenant])
+    return output
+
+
+def run_benchmark(
+    *,
+    case_path: Path = TEST_CASES_PATH,
+    observation_splits: frozenset[str] = frozenset({"train", "test"}),
+    synthetic_case_path: Path | None = SYNTHETIC_CASES_PATH,
+    include_case_details: bool = True,
+    split: str = "test",
+    scales: Iterable[int] = SCALES,
+    audit_only: bool = False,
+) -> dict[str, Any]:
+    if split == "test":
+        valid_configuration = (
+            case_path.resolve() == TEST_CASES_PATH.resolve()
+            and observation_splits == frozenset({"train", "test"})
+            and synthetic_case_path is not None
+            and synthetic_case_path.resolve() == SYNTHETIC_CASES_PATH.resolve()
+            and include_case_details
+        )
+    elif split == "heldout":
+        valid_configuration = (
+            case_path.resolve() == HELDOUT_PATH.resolve()
+            and observation_splits == frozenset({"train", "heldout"})
+            and synthetic_case_path is None
+            and not include_case_details
+        )
+    else:
+        raise ValueError(f"unsupported benchmark split: {split}")
+    if not valid_configuration:
+        raise ValueError(f"ambiguous {split} benchmark input configuration")
+
+    artifact_audit = audit_artifacts()
+    output: dict[str, Any] = {
+        "schema_version": "anonymous-behavior-recall-v3b-pilot",
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "engine": {
+            "name": "LiveDay0 MemoryService.recall",
+            "run_stage": "test_candidate" if split == "test" else "heldout_once",
+            "benchmark_split": split,
+            "query_embeddings": False,
+            "paid_provider_calls": 0,
+            "heldout_cases_loaded": split == "heldout" and not audit_only,
+        },
+        "artifact_audit": artifact_audit,
+    }
+    if not artifact_audit["passed"]:
+        raise RuntimeError("frozen artifact audit failed")
+    if not audit_only:
+        migrate_up()
+        output["runs"] = [
+            run_scale(
+                scale,
+                case_path=case_path,
+                observation_splits=observation_splits,
+                synthetic_case_path=synthetic_case_path,
+                include_case_details=include_case_details,
+            )
+            for scale in scales
+        ]
+        if split == "heldout":
+            output["artifact_audit"]["heldout_case_file_parsed"] = True
+            output["artifact_audit"]["heldout_case_content_logged"] = False
     return output
 
 
@@ -493,24 +582,7 @@ def main() -> None:
     parser.add_argument("--scale", type=int, choices=SCALES, action="append")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    artifact_audit = audit_artifacts()
-    output: dict[str, Any] = {
-        "schema_version": "anonymous-behavior-recall-v3b-pilot",
-        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "engine": {
-            "name": "LiveDay0 MemoryService.recall",
-            "run_stage": "test_candidate",
-            "query_embeddings": False,
-            "paid_provider_calls": 0,
-            "heldout_cases_loaded": False,
-        },
-        "artifact_audit": artifact_audit,
-    }
-    if not artifact_audit["passed"]:
-        raise SystemExit(json.dumps(output, ensure_ascii=False, indent=2))
-    if not args.audit_only:
-        migrate_up()
-        output["runs"] = [run_scale(scale) for scale in (args.scale or SCALES)]
+    output = run_benchmark(scales=args.scale or SCALES, audit_only=args.audit_only)
     rendered = json.dumps(output, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

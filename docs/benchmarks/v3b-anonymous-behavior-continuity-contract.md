@@ -191,3 +191,12 @@ source changed. Test Recall@10, repeated completeness, and synthetic mechanics
 are 1.0 at 1k/5k/10k with zero future/leakage/deletion failures. Heldout remains
 sealed and requires an explicit control-plane confirmation before its single
 run.
+
+The one-time run must use the deterministic heldout harness. Its default is
+test; heldout requires `--run-heldout-once`, an exact locked-candidate and
+manifest SHA/size match, and the canonical non-existing output path. The
+heldout corpus is train+heldout only. Synthetic mechanics remain test-only and
+cannot be mixed into the heldout person split; their locked test result is
+reported separately. Heldout output contains only aggregate metrics and frozen
+artifact identities, never query, expected-ID, or case-level rows. Preparing
+and testing the harness does not consume the single heldout run.
