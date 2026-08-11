@@ -1,0 +1,94 @@
+{
+  "artifacts": {
+    "cases_heldout.sealed.jsonl": {
+      "bytes": 73720,
+      "sha256": "e8d154a43264b6353341e5e4a016a328815e703e5ae5a6f82b6789fc2b809530"
+    },
+    "cases_synthetic_test.jsonl": {
+      "bytes": 34320,
+      "sha256": "382fe370b693439ba5055d53b31b09083035619184898720e582511b4e3455a6"
+    },
+    "cases_test.jsonl": {
+      "bytes": 179696,
+      "sha256": "c3bbc2dc906908e51d89f7c53f0ac1004da6fd5ffa72e6337dcc5009f0d309c6"
+    },
+    "entities.jsonl": {
+      "bytes": 104515,
+      "sha256": "5059f1b59a30a7ef3ee3bb62aa112a2329b82a7d5fb5c4db211aa4e041d60eb3"
+    },
+    "observations.jsonl": {
+      "bytes": 1497583,
+      "sha256": "21db377c917e0720b87805fc5373c05f90cc54f24ef3eb8522a2e9015c946df1"
+    },
+    "release_audit.json": {
+      "bytes": 1589,
+      "sha256": "b59c06d65ffc8f46940d20769b0173279761681687fa98e42506afa68c191933"
+    }
+  },
+  "created_at": "2026-08-11T17:15:37+08:00",
+  "distribution": {
+    "entities_by_source": {
+      "electricity_load_diagrams": 115,
+      "online_retail_ii": 2,
+      "oulad": 100
+    },
+    "entities_by_split": {
+      "heldout": 30,
+      "test": 74,
+      "train": 113
+    },
+    "real_cases_by_category": {
+      "current_shift": 63,
+      "repeated_behavior": 104,
+      "stable_pattern": 41,
+      "time_segment_continuity": 104
+    },
+    "real_cases_by_language": {
+      "en": 104,
+      "es": 104,
+      "zh": 104
+    },
+    "real_cases_by_split": {
+      "heldout": 90,
+      "test": 222
+    },
+    "synthetic_cases_by_category": {
+      "deletion_propagation": 10,
+      "lifecycle_supersession": 10,
+      "near_duplicate_noise": 10,
+      "stale_marker": 10,
+      "synthetic_reversal": 10
+    }
+  },
+  "heldout_boundary": {
+    "case_file": "cases_heldout.sealed.jsonl",
+    "status": "sealed_not_run"
+  },
+  "real_layer": {
+    "cases_heldout_sealed": 90,
+    "cases_test": 222,
+    "entities": 217,
+    "observations": 4340
+  },
+  "schema_version": "anonymous-behavior-manifest-v3b-pilot",
+  "source_snapshots": {
+    "electricity_load_diagrams": {
+      "bytes": 261335609,
+      "sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1"
+    },
+    "online_retail_ii": {
+      "bytes": 45622418,
+      "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb"
+    },
+    "oulad": {
+      "bytes": 46748244,
+      "sha256": "f2ed1902616c1fe8d2824d872c0b7d2d72be435bf0124d077044fe4be2c6d3e4"
+    }
+  },
+  "synthetic_layer": {
+    "entities": 0,
+    "observations": 0,
+    "query_interface_cases": 312,
+    "test_cases": 50
+  }
+}

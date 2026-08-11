@@ -3,7 +3,8 @@
   "decision_at": "2026-08-11T16:00:00+08:00",
   "preflight_completed_at": "2026-08-11T16:23:00+08:00",
   "pilot_decision_at": "2026-08-11T17:00:00+08:00",
-  "state": "PILOT_AUTHORIZED_BUILD_PENDING",
+  "pilot_frozen_at": "2026-08-11T17:15:37+08:00",
+  "state": "PILOT_FROZEN_RED_COMPLETE",
   "freeze_allowed": true,
   "license_verification": {
     "license": "CC BY 4.0",
@@ -20,10 +21,12 @@
     "actual_freeze_is_authoritative": true
   },
   "actual_frozen_real": {
-    "source_families": 0,
-    "entities": 0,
-    "observations": 0,
-    "cases": 0
+    "source_families": 3,
+    "entities": 217,
+    "observations": 4340,
+    "cases": 312,
+    "test_cases": 222,
+    "heldout_cases_sealed": 90
   },
   "synthetic_boundary": {
     "required_marker": "evidence_origin=synthetic",
@@ -31,10 +34,14 @@
       "query_interface",
       "perturbation",
       "near_duplicate",
+      "near_duplicate_noise",
       "cancellation_reversal",
+      "synthetic_reversal",
       "stale_marker",
       "deletion_operation",
-      "lifecycle_supersession"
+      "deletion_propagation",
+      "lifecycle_supersession",
+      "stress_coverage"
     ],
     "excluded_real_denominators": [
       "source_families",
@@ -46,7 +53,9 @@
     "created_counts": {
       "entities": 0,
       "observations": 0,
-      "cases": 0
+      "query_interface_cases": 312,
+      "mechanics_test_cases": 50,
+      "stress_cards_at_1k_5k_10k": [0, 1220, 6220]
     }
   },
   "sources": [
@@ -66,13 +75,16 @@
         "join_fields_ephemeral_only": ["id_student", "id_site", "code_module", "code_presentation"],
         "retained_projection": ["relative_slot", "activity_family", "activity_count_bucket"]
       },
-      "entity_quota": 120,
-      "observation_quota": 2400,
-      "case_quota": 180,
+      "original_preflight_entity_quota": 120,
+      "original_preflight_observation_quota": 2400,
+      "original_preflight_case_quota": 180,
       "base_eligible_entities": 2615,
       "k_anonymous_entities": 207,
       "privacy_selection_capacity": 100,
-      "entity_deficit": 20,
+      "pilot_frozen_entities": 100,
+      "pilot_frozen_observations": 2000,
+      "pilot_split_entities": {"train": 0, "test": 74, "heldout": 26},
+      "original_preflight_entity_deficit": 20,
       "preflight_state": "failed_privacy_capacity"
     },
     {
@@ -92,13 +104,16 @@
         "join_fields_ephemeral_only": ["Customer ID", "Invoice"],
         "retained_projection": ["relative_slot", "purchase_cancellation_state", "activity_bucket"]
       },
-      "entity_quota": 300,
-      "observation_quota": 6000,
-      "case_quota": 450,
+      "original_preflight_entity_quota": 300,
+      "original_preflight_observation_quota": 6000,
+      "original_preflight_case_quota": 450,
       "base_eligible_entities": 52,
       "k_anonymous_entities": 5,
       "privacy_selection_capacity": 2,
-      "entity_deficit": 298,
+      "pilot_frozen_entities": 2,
+      "pilot_frozen_observations": 40,
+      "pilot_split_entities": {"train": 0, "test": 0, "heldout": 2},
+      "original_preflight_entity_deficit": 298,
       "preflight_state": "failed_base_quota_and_privacy_capacity"
     },
     {
@@ -118,32 +133,51 @@
         "client_columns_ephemeral_only": true,
         "retained_projection": ["relative_slot", "load_state_relative_to_entity_median"]
       },
-      "entity_quota": 180,
-      "observation_quota": 3600,
-      "case_quota": 270,
+      "original_preflight_entity_quota": 180,
+      "original_preflight_observation_quota": 3600,
+      "original_preflight_case_quota": 270,
       "base_eligible_entities": 370,
       "k_anonymous_entities": 233,
       "privacy_selection_capacity": 115,
-      "entity_deficit": 65,
+      "pilot_frozen_entities": 115,
+      "pilot_frozen_observations": 2300,
+      "pilot_split_entities": {"train": 113, "test": 0, "heldout": 2},
+      "original_preflight_entity_deficit": 65,
       "preflight_state": "failed_privacy_capacity"
     }
   ],
   "collection_state": {
     "temporary_official_archives_downloaded_during_preflight": 3,
     "active_preflight_archives_retained": 0,
-    "cleanup_state": "exact temporary directory moved to macOS Trash; recoverable until Trash is emptied",
+    "cleanup_state": "all preflight and Pilot raw snapshot directories moved to macOS Trash; recoverable until Trash is emptied",
     "archives_committed_or_redistributed": 0,
-    "eligible_real_entities_selected": 0,
-    "frozen_real_entities": 0,
-    "frozen_real_observations": 0,
-    "frozen_cases": 0,
-    "red_baseline_runs": 0
+    "eligible_real_entities_selected": 217,
+    "frozen_real_entities": 217,
+    "frozen_real_observations": 4340,
+    "frozen_real_derived_cases": 312,
+    "frozen_synthetic_mechanics_cases": 50,
+    "red_test_baseline_runs": 3,
+    "heldout_runs": 0
   },
-  "required_downstream_audits": [
-    "empirical_membership_inference",
-    "full_leave_one_field_out_reidentification",
-    "near_duplicate_cluster_split_isolation",
-    "source_entity_signature_time_split",
-    "future_evidence_leakage"
-  ]
+  "release_audit": {
+    "passed": true,
+    "nearest_signature_mia_auc": 0.5,
+    "maximum_signature_membership_posterior": 0.5,
+    "minimum_exact_signature_matches": 5,
+    "minimum_leave_one_slot_out_matches": 5,
+    "unique_reidentification_matches": 0,
+    "entity_split_leaks": 0,
+    "signature_split_leaks": 0,
+    "near_duplicate_cluster_split_leaks": 0,
+    "future_expected_label_leaks": 0,
+    "source_identifier_values_in_release": 0
+  },
+  "red_test_baseline": {
+    "result_sha256": "dac2dd84ec2efa0cd6de4df2b3962dec4ece8cceb9a03d68ca01a6d5958550fa",
+    "heldout_loaded": false,
+    "recall_at_10_1k_5k_10k": [0.5565, 0.5577, 0.5577],
+    "repeated_behavior_completeness_1k_5k_10k": [0.0243, 0.027, 0.027],
+    "future_evidence_hits_1k_5k_10k": [314, 309, 311],
+    "synthetic_mechanics_pass_rate_1k_5k_10k": [1.0, 1.0, 1.0]
+  }
 }

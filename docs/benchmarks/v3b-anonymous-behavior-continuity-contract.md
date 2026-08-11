@@ -52,6 +52,9 @@ Generated or manually written material is permitted only with `evidence_origin: 
 - `query_interface`: Chinese, English, or Spanish query wording grounded only in selected real observations;
 - `perturbation` or `near_duplicate`: controlled retrieval noise that cannot become expected real evidence;
 - `cancellation_reversal`, `stale_marker`, `deletion_operation`, or `lifecycle_supersession`: benchmark lifecycle operations whose synthetic status is reported separately.
+- Frozen implementation aliases `near_duplicate_noise`, `synthetic_reversal`,
+  `deletion_propagation`, and `stress_coverage` map only to those same synthetic
+  mechanics and remain excluded from every real denominator.
 
 Synthetic material may not create an entity, observation, fact, behavior,
 preference, relationship, or unfinished item. It is excluded from the 3-source,
@@ -157,3 +160,26 @@ The target remains to reduce the v2 expansion-dependency range of 0.62-0.64 with
 The Pilot is not closable if a privacy/linkage gate fails, synthetic material
 enters a real-source denominator, actual counts are presented as the former
 600/12,000/900 design, or heldout informs tuning.
+
+## Frozen Pilot record
+
+The 2026-08-11 freeze reached the full privacy-capacity upper bound: 217 real
+entities and 4,340 real observations. Cluster-isolated split sizes are
+113/74/30 train/test/heldout, yielding 222 test and 90 sealed-heldout
+real-derived cases (312 actual, replacing the approximate 325 planning number).
+The real query interface is balanced 104/104/104 zh/en/es and remains synthetic
+interface text, not source-language evidence. Fifty additional synthetic test
+mechanics cases are isolated from real denominators.
+
+Release MIA/re-identification and split audits passed. The unchanged test RED is
+red at all scales; heldout remains sealed. Recall changes are now permitted on
+test only under the existing no-label-relaxation and no-full-corpus-traversal
+rules.
+
+The Pilot uses the strictly smaller projection already exercised by preflight:
+Retail keeps only relative slot, purchase/cancellation state, and activity
+bucket; Electricity keeps only relative slot and load state relative to the
+entity median. Product family, variability, and change-direction fields from
+the prospective design were omitted rather than inferred. This is a
+privacy-conservative coverage reduction and limits the Pilot's behavioral
+semantics; it is not synthetic completion.

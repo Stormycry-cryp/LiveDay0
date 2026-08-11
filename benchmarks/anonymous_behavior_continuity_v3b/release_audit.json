@@ -1,0 +1,54 @@
+{
+  "actual": {
+    "real_derived_heldout_cases": 90,
+    "real_derived_test_cases": 222,
+    "real_entities": 217,
+    "real_observations": 4340,
+    "synthetic_test_cases": 50
+  },
+  "errors": [],
+  "leakage": {
+    "cross_entity_expected_hits": 0,
+    "entity_split_leaks": 0,
+    "future_expected_hits": 0,
+    "heldout_case_reads_during_test_red": 0,
+    "near_duplicate_cluster_split_leaks": 0,
+    "signature_split_leaks": 0,
+    "source_identifier_values_in_release": 0
+  },
+  "membership_inference": {
+    "attack": "nearest released generalized signature over the release-eligible pool",
+    "maximum_signature_posterior": 0.5,
+    "nearest_signature_auc": 0.5
+  },
+  "passed": true,
+  "reidentification": {
+    "minimum_exact_signature_matches": 5,
+    "minimum_leave_one_slot_out_matches": 5,
+    "unique_exact_or_leave_one_out_matches": 0
+  },
+  "schema_version": "anonymous-behavior-release-audit-v3b-pilot",
+  "selection": {
+    "electricity_load_diagrams": {
+      "eligible_entities": 233,
+      "eligible_signature_count": 7,
+      "maximum_signature_selection_fraction": 0.5,
+      "selected_entities": 115,
+      "selection_capacity": 115
+    },
+    "online_retail_ii": {
+      "eligible_entities": 5,
+      "eligible_signature_count": 1,
+      "maximum_signature_selection_fraction": 0.4,
+      "selected_entities": 2,
+      "selection_capacity": 2
+    },
+    "oulad": {
+      "eligible_entities": 207,
+      "eligible_signature_count": 11,
+      "maximum_signature_selection_fraction": 0.5,
+      "selected_entities": 100,
+      "selection_capacity": 100
+    }
+  }
+}
