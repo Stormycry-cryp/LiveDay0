@@ -10,18 +10,38 @@ v3b evaluates retrieval continuity for one anonymous behavior entity across time
 
 The goal does not add a frontend, production service, provider, final-response generation, or deployment. It does not collect user data. Any data voluntarily supplied by the user in the future is a separate private `n=1` product-experience fixture: local by default, deletable, never committed or redistributed, and never counted toward benchmark sources, entities, observations, cases, or language coverage.
 
+## Pilot amendment after prospective preflight
+
+On 2026-08-11 the user explicitly replaced the failed 600-entity publication
+gate with a fixed-source Pilot based on the preflight's conservative selection
+capacity. This is a declared scope change after observing aggregate capacity,
+not a relaxation of the previously fixed projection, `k>=5`, 20-window,
+90-day, near-duplicate, or maximum-50%-per-signature privacy rules.
+
+Public and internal claims must use the actual frozen result. The prospective
+upper bound is 217 real anonymous entities, 4,340 real source-derived
+observations, and approximately 325 real-derived evaluation cases. If
+signature/near-duplicate cluster isolation or a release-level privacy audit
+reduces the feasible count, the smaller actual count is authoritative and the
+deficit may not be filled with synthetic material.
+
 ## Real-source layer
 
 Exactly three independently collected source families are authorized:
 
 | Source family | Real entities | Real observations | Cases | Maximum share |
 | --- | ---: | ---: | ---: | ---: |
-| OULAD | 120 | 2,400 | 180 | 20% |
-| UCI Online Retail II | 300 | 6,000 | 450 | 50% |
-| UCI ElectricityLoadDiagrams20112014 | 180 | 3,600 | 270 | 30% |
-| Total | 600 | 12,000 | 900 | 100% |
+| OULAD | up to 100 | up to 2,000 | actual freeze | 46.1% |
+| UCI Online Retail II | up to 2 | up to 40 | actual freeze | 0.9% |
+| UCI ElectricityLoadDiagrams20112014 | up to 115 | up to 2,300 | actual freeze | 53.0% |
+| Pilot upper bound | 217 | 4,340 | approximately 325 | 100% |
 
-All 600 entities and 12,000 observations must be derived from real source rows. Every entity contributes exactly 20 source-derived observations spanning at least 90 source-relative days and four temporal quartiles. If metadata/schema preflight cannot prove the quota for any family, or if a privacy gate rejects a family, freezing stops and the exact deficit is reported. Another family or synthetic content may not fill it.
+Every frozen entity and observation must be derived from real source rows. Every
+entity contributes exactly 20 source-derived observations spanning at least 90
+source-relative days and four temporal quartiles. The Pilot may freeze no more
+than half of any exact signature's source-eligible members. Release-level
+privacy or split isolation may lower a source's count but cannot raise these
+caps. Another family or synthetic content may not fill a shortfall.
 
 The three datasets share UCI as a distributor but represent independent collection origins and protocols: Open University VLE behavior, UK online-retail transactions, and Portuguese electricity-client load. Mirrors or derived copies do not create another family.
 
@@ -33,9 +53,16 @@ Generated or manually written material is permitted only with `evidence_origin: 
 - `perturbation` or `near_duplicate`: controlled retrieval noise that cannot become expected real evidence;
 - `cancellation_reversal`, `stale_marker`, `deletion_operation`, or `lifecycle_supersession`: benchmark lifecycle operations whose synthetic status is reported separately.
 
-Synthetic material may not create an entity, observation, fact, behavior, preference, relationship, or unfinished item. It is excluded from the 3-source, 600-entity, 12,000-observation, evidence-language, and real-behavior category denominators. A query or label may restate a source-derived bucket but may not add semantics not present in the source.
+Synthetic material may not create an entity, observation, fact, behavior,
+preference, relationship, or unfinished item. It is excluded from the 3-source,
+real-entity, real-observation, evidence-language, and real-behavior category
+denominators. A query or label may restate a source-derived bucket but may not
+add semantics not present in the source.
 
-Chinese/English/Spanish distribution is an interface-query evaluation only: 300 cases per language overall, 150 per language in each evaluation split. v3b makes no claim about source-evidence language coverage.
+Chinese/English/Spanish distribution is an interface-query evaluation only.
+Real-derived cases should be balanced across the three query languages as
+closely as integer and sealed-split constraints permit. v3b makes no claim
+about source-evidence language coverage.
 
 ## Preflight and projection gates
 
@@ -78,9 +105,18 @@ Pseudonymization alone is not treated as anonymization. If the projected sequenc
 
 ## Coverage and split
 
-The prospective corpus remains 600 entities and 12,000 observations: 300/150/150 entities for train/test/heldout. Each source is represented proportionally in every split. Entity, source-group/signature, duplicate cluster, and future time segments are disjoint.
+The Pilot upper bound is 217 entities and 4,340 observations. Split sizes are
+determined only after assigning complete exact/near-duplicate signature
+components to train/test/heldout, aiming for roughly 50/25/25 without breaking
+isolation. Online Retail II has only two safely selectable entities and is not
+required to appear in every split; its per-source metrics are descriptive only.
+Actual per-source and per-split counts must be published. Entity, signature,
+near-duplicate cluster, and future time segments are disjoint, and heldout is
+sealed before the RED baseline.
 
-There are 15 evaluation categories, 60 cases each, 30 in test and 30 in heldout:
+The Pilot retains the 15 evaluation categories, but category and split counts
+are determined by eligible real patterns and reported rather than padded. Each
+evaluation entity may contribute at most three real-derived cases:
 
 - real-source semantics: `stable_pattern`, `current_shift`, `repeated_behavior`, `behavior_mix_shift`, `source_cancellation`, `stale_pattern`, `cross_entity_isolation`, `temporal_decay`, `time_segment_continuity`, and `long_term_continuity`;
 - explicitly synthetic mechanics: `near_duplicate_noise`, `synthetic_reversal`, `deletion_propagation`, `lifecycle_supersession`, and `future_evidence_guard`.
@@ -89,7 +125,11 @@ Synthetic-mechanics results are reported separately and never averaged into a cl
 
 ## Power and metrics
 
-Test and heldout each contain 450 cases from 150 entities, three cases per entity. With assumed intra-entity correlation 0.15, the design effect is 1.30 and effective sample size about 346 per split. A worst-case 0.50 proportion has approximate 95% half-width 0.053. Thirty cases per category have a 95.8% chance to expose at least one failure when the true category failure rate is 10%.
+The former 900-case power claim is withdrawn. Pilot intervals and detection
+probabilities must be recomputed from the actual frozen entity/case counts with
+entity-clustered uncertainty. Sources or categories with fewer than 20 cases
+are descriptive and cannot support comparative claims. Online Retail II is a
+continuity fixture, not a statistically powered source stratum.
 
 At 1k, 5k, and 10k cards, report:
 
@@ -104,12 +144,16 @@ The target remains to reduce the v2 expansion-dependency range of 0.62-0.64 with
 
 ## Freeze and acceptance order
 
-1. Freeze this contract and source matrix.
-2. Run metadata/schema/license and quota preflight without committing raw data.
-3. If and only if all gates pass, download official snapshots, record hashes, build projected real observations, and run privacy/leakage audits.
+1. Freeze this amended Pilot contract and source matrix.
+2. Reuse the already frozen metadata/schema/license preflight rules and official
+   archive hashes; redownload only the same three official snapshots when needed.
+3. Build no more than the preflight capacity, then run release-level
+   privacy/leakage audits without committing raw data.
 4. Freeze projected dataset and cases with SHA-256 manifests.
 5. Run the unchanged v2 recall implementation on v3b `test` and store the RED result; do not inspect heldout.
 6. Only then may recall code change. Tune on test, freeze code/thresholds, and run heldout once.
 7. Run proportional PostgreSQL, data-audit, v2-regression, and directly affected tests before closeout.
 
-The goal is not closable if a real-source quota is short, a privacy/linkage gate fails, synthetic material enters a real-source denominator, or heldout informs tuning.
+The Pilot is not closable if a privacy/linkage gate fails, synthetic material
+enters a real-source denominator, actual counts are presented as the former
+600/12,000/900 design, or heldout informs tuning.

@@ -2,8 +2,9 @@
   "schema_version": "anonymous-behavior-source-matrix-v3b",
   "decision_at": "2026-08-11T16:00:00+08:00",
   "preflight_completed_at": "2026-08-11T16:23:00+08:00",
-  "state": "NO_GO_PREFLIGHT",
-  "freeze_allowed": false,
+  "pilot_decision_at": "2026-08-11T17:00:00+08:00",
+  "state": "PILOT_AUTHORIZED_BUILD_PENDING",
+  "freeze_allowed": true,
   "license_verification": {
     "license": "CC BY 4.0",
     "official_pages_checked_at": "2026-08-11",
@@ -13,9 +14,10 @@
   },
   "real_quota": {
     "source_families": 3,
-    "entities": 600,
-    "observations": 12000,
-    "cases": 900
+    "entities_upper_bound": 217,
+    "observations_upper_bound": 4340,
+    "cases_target_approximate": 325,
+    "actual_freeze_is_authoritative": true
   },
   "actual_frozen_real": {
     "source_families": 0,
@@ -137,7 +139,7 @@
     "frozen_cases": 0,
     "red_baseline_runs": 0
   },
-  "blocked_downstream_audits": [
+  "required_downstream_audits": [
     "empirical_membership_inference",
     "full_leave_one_field_out_reidentification",
     "near_duplicate_cluster_split_isolation",
