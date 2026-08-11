@@ -183,3 +183,11 @@ entity median. Product family, variability, and change-direction fields from
 the prospective design were omitted rather than inferred. This is a
 privacy-conservative coverage reduction and limits the Pilot's behavioral
 semantics; it is not synthetic completion.
+
+The test-only recall candidate is locked after adding an explicit `as_of`
+cutoff and English possessive-anchor normalization. Candidate/final limits stay
+64/10; no frozen artifact, label, expected set, window, split, privacy rule, or
+source changed. Test Recall@10, repeated completeness, and synthetic mechanics
+are 1.0 at 1k/5k/10k with zero future/leakage/deletion failures. Heldout remains
+sealed and requires an explicit control-plane confirmation before its single
+run.

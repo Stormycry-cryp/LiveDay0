@@ -48,3 +48,4 @@ class RecallOptions:
     timeout_ms: int = 800
     simulate_vector_timeout: bool = False
     query_embedding: tuple[float, ...] | None = None
+    as_of: datetime | None = None

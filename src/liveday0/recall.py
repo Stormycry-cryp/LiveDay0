@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import re
-from hashlib import sha256
 from datetime import datetime
+from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -57,8 +57,8 @@ class RecallCompiler:
             if options.simulate_vector_timeout:
                 degraded.append("vector_candidate_timeout")
 
-            fts_card_ids = self._fts_card_ids(conn, query, options.candidate_limit)
-            lexical_card_ids = self._lexical_card_ids(conn, query, options.candidate_limit)
+            fts_card_ids = self._fts_card_ids(conn, query, options)
+            lexical_card_ids = self._lexical_card_ids(conn, query, options)
             vector_card_ids = self._vector_card_ids(conn, options, degraded)
             targeted_ids = list(dict.fromkeys(fts_card_ids + lexical_card_ids + vector_card_ids))[
                 : options.candidate_limit
@@ -73,8 +73,9 @@ class RecallCompiler:
                       ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
                     WHERE c.tenant_id=%s AND c.id = ANY(%s)
                       AND c.lifecycle IN ('active','provisional')
+                      AND (%s::timestamptz IS NULL OR c.valid_at <= %s)
                     """,
-                    (self.tenant_id, targeted_ids),
+                    (self.tenant_id, targeted_ids, options.as_of, options.as_of),
                 ).fetchall()
                 targeted_by_id = {row["id"]: row for row in targeted_rows}
                 cards.extend(targeted_by_id[card_id] for card_id in targeted_ids if card_id in targeted_by_id)
@@ -89,13 +90,14 @@ class RecallCompiler:
                           ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
                         WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
                           AND NOT (c.id = ANY(%s))
+                          AND (%s::timestamptz IS NULL OR c.valid_at <= %s)
                         ORDER BY c.valid_at DESC, c.id
                         LIMIT %s
                         """,
-                        (self.tenant_id, targeted_ids, remaining),
+                        (self.tenant_id, targeted_ids, options.as_of, options.as_of, remaining),
                     ).fetchall()
                 )
-            source_map = self._source_map(conn, [row["id"] for row in cards])
+            source_map = self._source_map(conn, [row["id"] for row in cards], options.as_of)
             scored: list[tuple[float, dict]] = []
             for row in cards:
                 if row["body"].get("applicability") == "excluded_from_personal_continuity":
@@ -122,12 +124,13 @@ class RecallCompiler:
                     conn,
                     row,
                     source_map.get(row["id"], []),
+                    options.as_of,
                 )
 
             projections = self._projection_cards(conn, query, set(cards_by_id), options)
             mentions = self._mention_cards(conn, query, options)
-            current_evidence = self._evidence_cards(conn, current_evidence_ids)
-            trace_summary = self._trace_summary(conn, list(cards_by_id))
+            current_evidence = self._evidence_cards(conn, current_evidence_ids, options.as_of)
+            trace_summary = self._trace_summary(conn, list(cards_by_id), options.as_of)
 
             layers: dict[str, list[dict[str, Any]]] = {
                 "current_evidence": current_evidence,
@@ -197,6 +200,7 @@ class RecallCompiler:
                     "id": str(snapshot_id),
                     "tenant_revision": tenant["revision"],
                     "state": "active",
+                    **({"as_of": options.as_of} if options.as_of is not None else {}),
                 },
                 "degraded": bool(degraded),
                 "degraded_reasons": degraded,
@@ -247,7 +251,7 @@ class RecallCompiler:
                 raise NotFound("item is not in the pinned expansion envelope")
             return item
 
-    def _fts_card_ids(self, conn, query: str, limit: int) -> list[UUID]:
+    def _fts_card_ids(self, conn, query: str, options: RecallOptions) -> list[UUID]:
         if not query.strip():
             return []
         rows = conn.execute(
@@ -255,23 +259,25 @@ class RecallCompiler:
             SELECT cs.card_id, max(ts_rank_cd(e.search_vector, plainto_tsquery('simple', %s))) AS rank
             FROM evidence e
             JOIN card_sources cs ON cs.tenant_id=e.tenant_id AND cs.evidence_id=e.id
+            JOIN semantic_cards c ON c.tenant_id=cs.tenant_id AND c.id=cs.card_id
             WHERE e.tenant_id=%s AND e.status='active'
               AND e.search_vector @@ plainto_tsquery('simple', %s)
+              AND (%s::timestamptz IS NULL OR (c.valid_at <= %s AND e.occurred_at <= %s))
             GROUP BY cs.card_id
             ORDER BY rank DESC, cs.card_id
             LIMIT %s
             """,
-            (query, self.tenant_id, query, limit),
+            (query, self.tenant_id, query, options.as_of, options.as_of, options.as_of, options.candidate_limit),
         ).fetchall()
         return [row["card_id"] for row in rows]
 
-    def _lexical_card_ids(self, conn, query: str, limit: int) -> list[UUID]:
+    def _lexical_card_ids(self, conn, query: str, options: RecallOptions) -> list[UUID]:
         """Candidate fallback for CJK and mixed-language cues not handled by simple FTS."""
         lowered = query.strip().lower()
         if not lowered:
             return []
         fragments = [
-            token
+            token.removesuffix("'s")
             for token in re.findall(r"[a-z0-9][a-z0-9'-]{2,}", lowered)
             if token not in {"current", "actual", "ongoing", "matter", "next", "future", "still", "continues", "time", "longer"}
         ]
@@ -285,9 +291,11 @@ class RecallCompiler:
             SELECT cs.card_id, e.content
             FROM evidence e
             JOIN card_sources cs ON cs.tenant_id=e.tenant_id AND cs.evidence_id=e.id
+            JOIN semantic_cards c ON c.tenant_id=cs.tenant_id AND c.id=cs.card_id
             WHERE e.tenant_id=%s AND e.status='active' AND e.content ILIKE ANY(%s)
+              AND (%s::timestamptz IS NULL OR (c.valid_at <= %s AND e.occurred_at <= %s))
             """,
-            (self.tenant_id, patterns),
+            (self.tenant_id, patterns, options.as_of, options.as_of, options.as_of),
         ).fetchall()
         scores: dict[UUID, int] = {}
         for row in rows:
@@ -298,7 +306,7 @@ class RecallCompiler:
             )
         return [
             card_id
-            for card_id, _ in sorted(scores.items(), key=lambda item: (item[1], str(item[0])), reverse=True)[:limit]
+            for card_id, _ in sorted(scores.items(), key=lambda item: (item[1], str(item[0])), reverse=True)[: options.candidate_limit]
         ]
 
     def _vector_card_ids(
@@ -323,14 +331,21 @@ class RecallCompiler:
             SELECT DISTINCT cs.card_id, e.embedding <=> %s::vector AS distance
             FROM evidence e
             JOIN card_sources cs ON cs.tenant_id=e.tenant_id AND cs.evidence_id=e.id
+            JOIN semantic_cards c ON c.tenant_id=cs.tenant_id AND c.id=cs.card_id
             WHERE e.tenant_id=%s AND e.status='active' AND e.embedding IS NOT NULL
+              AND (%s::timestamptz IS NULL OR (c.valid_at <= %s AND e.occurred_at <= %s))
             ORDER BY distance LIMIT %s
             """,
-            (literal, self.tenant_id, options.candidate_limit),
+            (literal, self.tenant_id, options.as_of, options.as_of, options.as_of, options.candidate_limit),
         ).fetchall()
         return [row["card_id"] for row in rows]
 
-    def _source_map(self, conn, card_ids: list[UUID]) -> dict[UUID, list[dict[str, Any]]]:
+    def _source_map(
+        self,
+        conn,
+        card_ids: list[UUID],
+        as_of: datetime | None,
+    ) -> dict[UUID, list[dict[str, Any]]]:
         if not card_ids:
             return {}
         rows = conn.execute(
@@ -339,9 +354,10 @@ class RecallCompiler:
             FROM card_sources cs
             JOIN evidence e ON e.tenant_id=cs.tenant_id AND e.id=cs.evidence_id
             WHERE cs.tenant_id=%s AND cs.card_id = ANY(%s) AND e.status <> 'deleted'
+              AND (%s::timestamptz IS NULL OR e.occurred_at <= %s)
             ORDER BY e.occurred_at, e.id
             """,
-            (self.tenant_id, card_ids),
+            (self.tenant_id, card_ids, as_of, as_of),
         ).fetchall()
         result: dict[UUID, list[dict[str, Any]]] = {}
         for row in rows:
@@ -355,18 +371,26 @@ class RecallCompiler:
             )
         return result
 
-    def _card_from_row(self, conn, row: dict, sources: list[dict]) -> dict[str, Any]:
+    def _card_from_row(
+        self,
+        conn,
+        row: dict,
+        sources: list[dict],
+        as_of: datetime | None,
+    ) -> dict[str, Any]:
         body = dict(row["body"])
         pending = False
         pending_source_ids: list[UUID] = []
         if row["card_type"] == "event":
             deltas = conn.execute(
                 """
-                SELECT evidence_id, delta FROM event_deltas
-                WHERE tenant_id=%s AND event_id=%s AND state='pending'
-                ORDER BY created_at, id
+                SELECT d.evidence_id, d.delta FROM event_deltas d
+                JOIN evidence e ON e.tenant_id=d.tenant_id AND e.id=d.evidence_id
+                WHERE d.tenant_id=%s AND d.event_id=%s AND d.state='pending'
+                  AND (%s::timestamptz IS NULL OR e.occurred_at <= %s)
+                ORDER BY d.created_at, d.id
                 """,
-                (self.tenant_id, row["id"]),
+                (self.tenant_id, row["id"], as_of, as_of),
             ).fetchall()
             unsafe = any(delta["delta"].get("requires_restructure") for delta in deltas)
             if not unsafe:
@@ -415,6 +439,20 @@ class RecallCompiler:
         family_counts: dict[str, int] = {}
         for row in rows:
             support_ids = set(row["support_ids"] or [])
+            if options.as_of and support_ids:
+                future_support = conn.execute(
+                    """
+                    SELECT EXISTS(
+                      SELECT 1 FROM semantic_cards
+                      WHERE tenant_id=%s AND id = ANY(%s) AND valid_at > %s
+                    ) AS value
+                    """,
+                    (self.tenant_id, list(support_ids), options.as_of),
+                ).fetchone()["value"]
+                if future_support:
+                    continue
+            elif options.as_of and not support_ids:
+                continue
             if not (support_ids & selected_card_ids) and self._relevance(query, row["body"]) <= 0:
                 continue
             family = row["projection_type"]
@@ -450,11 +488,13 @@ class RecallCompiler:
             FROM mentions m
             JOIN mention_candidates mc ON mc.tenant_id=m.tenant_id AND mc.mention_id=m.id
             JOIN semantic_cards c ON c.tenant_id=mc.tenant_id AND c.id=mc.candidate_card_id
+            JOIN evidence e ON e.tenant_id=m.tenant_id AND e.id=m.evidence_id
             WHERE m.tenant_id=%s AND m.state='unbound' AND c.lifecycle IN ('active','provisional')
+              AND (%s::timestamptz IS NULL OR (e.occurred_at <= %s AND c.valid_at <= %s))
             GROUP BY m.id
             ORDER BY m.created_at DESC LIMIT %s
             """,
-            (self.tenant_id, options.per_relation_family_limit),
+            (self.tenant_id, options.as_of, options.as_of, options.as_of, options.per_relation_family_limit),
         ).fetchall()
         return [
             {
@@ -471,16 +511,22 @@ class RecallCompiler:
             if self._relevance(query, {"surface_text": row["surface_text"]}) > 0
         ]
 
-    def _evidence_cards(self, conn, ids: list[UUID]) -> list[dict[str, Any]]:
+    def _evidence_cards(
+        self,
+        conn,
+        ids: list[UUID],
+        as_of: datetime | None,
+    ) -> list[dict[str, Any]]:
         if not ids:
             return []
         rows = conn.execute(
             """
             SELECT id, modality, source_kind, occurred_at, received_at, status
             FROM evidence WHERE tenant_id=%s AND id = ANY(%s) AND status <> 'deleted'
+              AND (%s::timestamptz IS NULL OR occurred_at <= %s)
             ORDER BY received_at
             """,
-            (self.tenant_id, ids),
+            (self.tenant_id, ids, as_of, as_of),
         ).fetchall()
         return [
             {
@@ -497,7 +543,12 @@ class RecallCompiler:
             for row in rows
         ]
 
-    def _trace_summary(self, conn, selected_card_ids: list[UUID]) -> dict[str, Any] | None:
+    def _trace_summary(
+        self,
+        conn,
+        selected_card_ids: list[UUID],
+        as_of: datetime | None,
+    ) -> dict[str, Any] | None:
         if not selected_card_ids:
             return None
         rows = conn.execute(
@@ -506,11 +557,13 @@ class RecallCompiler:
             FROM relations r
             JOIN life_traces lt
               ON lt.tenant_id=r.tenant_id AND r.from_kind='life_trace' AND lt.id=r.from_id
+            JOIN evidence e ON e.tenant_id=lt.tenant_id AND e.id=lt.evidence_id
             WHERE r.tenant_id=%s AND r.to_kind='semantic_card' AND r.to_id = ANY(%s)
               AND r.lifecycle='active' AND lt.lifecycle='active'
+              AND (%s::timestamptz IS NULL OR e.occurred_at <= %s)
             ORDER BY lt.id
             """,
-            (self.tenant_id, selected_card_ids),
+            (self.tenant_id, selected_card_ids, as_of, as_of),
         ).fetchall()
         if not rows:
             return None
@@ -538,7 +591,11 @@ class RecallCompiler:
             return 0.0
         text = RecallCompiler._searchable_values(body).lower()
         score = 4.0 if query in text else 0.0
-        terms = {term for term in re.split(r"[\s,，。！？!?；;：:]+", query) if term}
+        terms = {
+            term.removesuffix("'s")
+            for term in re.split(r"[\s,，。！？!?；;：:]+", query)
+            if term.removesuffix("'s")
+        }
         for term in terms:
             if term in text:
                 score += min(2.0, 0.5 + len(term) / 4)

@@ -36,3 +36,8 @@ future-label leaks, or retained source-ID values.
 The unchanged recall engine RED result is
 `results/red_test_baseline.json`. Heldout cases were byte-hash verified but not
 parsed or run. See `pilot_report.md` for metrics and limitations.
+
+The locked test-only candidate is `results/candidate_test_locked.json`. It adds
+an explicit recall `as_of` cutoff and normalizes English possessive anchors; it
+does not change frozen data, cases, labels, windows, privacy gates, candidate or
+final limits. Heldout remains sealed pending control-plane confirmation.

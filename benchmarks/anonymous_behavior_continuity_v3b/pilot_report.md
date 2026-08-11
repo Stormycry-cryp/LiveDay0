@@ -82,3 +82,33 @@ work is a minimal time-cutoff guard plus repeated-event multi-item retrieval;
 code and thresholds must then freeze before the single heldout run. Labels,
 expected sets, windows, anonymity rules, and full-corpus traversal may not be
 relaxed to improve the score.
+
+## Locked test-only candidate
+
+The minimal candidate adds `RecallOptions.as_of` and applies it to semantic-card
+candidates, FTS, lexical and vector lanes, fallback cards, sources, pending event
+deltas, current evidence, mentions, projections, and trace summaries. It also
+normalizes a trailing English possessive `'s` in lexical fragments and relevance
+terms, so the already-frozen random entity anchor participates in ranking. The
+candidate/final limits remain 64/10 and no corpus traversal or label-derived
+expected ID enters recall.
+
+| Scale | R@10 before → after | Repeated before → after | Future hits before → after | Expansion | Median ms before → after | P95 ms before → after |
+| ---: | --- | --- | --- | ---: | --- | --- |
+| 1k | 0.5565 → 1.0000 | 0.0243 → 1.0000 | 314 → 0 | 0.0000 | 35.174 → 34.240 | 45.457 → 47.532 |
+| 5k | 0.5577 → 1.0000 | 0.0270 → 1.0000 | 309 → 0 | 0.0000 | 53.088 → 53.884 | 65.043 → 67.306 |
+| 10k | 0.5577 → 1.0000 | 0.0270 → 1.0000 | 311 → 0 | 0.0000 | 79.142 → 78.371 | 98.672 → 96.058 |
+
+All 222 real-derived test cases and all 50 synthetic mechanics cases pass at
+each scale. Missed required items, future hits, cross-tenant leakage, synthetic
+intrusion, and deletion resurrection are all zero. Expansion dependency remains
+zero because every required item is direct context. Median latency changed by
+-2.66%, +1.50%, and -0.97%; P95 changed by +4.56%, +3.48%, and -2.65% at
+1k/5k/10k. Maximum latency was noisier: 68.487/99.783/163.291 ms versus
+57.051/97.146/138.244 ms in the single RED runs.
+
+The candidate result SHA-256 is
+`027c19e1ece2264f804ddcadfc98de6b80224181ae81fdb9048a210bf3169ebc`.
+Heldout was neither parsed nor run by the candidate runner. Code and parameters
+are locked on test; a one-time heldout run requires the next explicit
+control-plane confirmation.

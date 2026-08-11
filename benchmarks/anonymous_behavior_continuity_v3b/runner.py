@@ -14,6 +14,7 @@ import math
 import statistics
 import time
 from collections import Counter, defaultdict
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -313,12 +314,24 @@ def run_scale(scale: int) -> dict[str, Any]:
     warmups = []
     for case in real_cases[:6]:
         started = time.perf_counter()
-        service.recall(case["query"], options=options)
+        service.recall(
+            case["query"],
+            options=replace(
+                options,
+                as_of=datetime(2020, 1, 1, tzinfo=timezone.utc) + timedelta(days=case["cutoff_slot"]),
+            ),
+        )
         warmups.append((time.perf_counter() - started) * 1000)
 
     def evaluate(case: dict[str, Any], expected_ids: list[str], forbidden_ids: list[str]) -> dict[str, Any]:
         started = time.perf_counter()
-        context = service.recall(case["query"], options=options)
+        context = service.recall(
+            case["query"],
+            options=replace(
+                options,
+                as_of=datetime(2020, 1, 1, tzinfo=timezone.utc) + timedelta(days=case["cutoff_slot"]),
+            ),
+        )
         latency = (time.perf_counter() - started) * 1000
         ranked, direct = flatten_context(context)
         hits_by_k = {k: sum(item in ranked[:k] for item in expected_ids) for k in (1, 5, 10)}
@@ -485,7 +498,8 @@ def main() -> None:
         "schema_version": "anonymous-behavior-recall-v3b-pilot",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "engine": {
-            "name": "unchanged LiveDay0 v2 MemoryService.recall",
+            "name": "LiveDay0 MemoryService.recall",
+            "run_stage": "test_candidate",
             "query_embeddings": False,
             "paid_provider_calls": 0,
             "heldout_cases_loaded": False,

@@ -4,7 +4,7 @@
   "preflight_completed_at": "2026-08-11T16:23:00+08:00",
   "pilot_decision_at": "2026-08-11T17:00:00+08:00",
   "pilot_frozen_at": "2026-08-11T17:15:37+08:00",
-  "state": "PILOT_FROZEN_RED_COMPLETE",
+  "state": "TEST_CANDIDATE_LOCKED_HELDOUT_PENDING",
   "freeze_allowed": true,
   "license_verification": {
     "license": "CC BY 4.0",
@@ -179,5 +179,16 @@
     "repeated_behavior_completeness_1k_5k_10k": [0.0243, 0.027, 0.027],
     "future_evidence_hits_1k_5k_10k": [314, 309, 311],
     "synthetic_mechanics_pass_rate_1k_5k_10k": [1.0, 1.0, 1.0]
+  },
+  "test_candidate": {
+    "result_sha256": "027c19e1ece2264f804ddcadfc98de6b80224181ae81fdb9048a210bf3169ebc",
+    "heldout_loaded": false,
+    "parameters_locked": true,
+    "recall_at_10_1k_5k_10k": [1.0, 1.0, 1.0],
+    "repeated_behavior_completeness_1k_5k_10k": [1.0, 1.0, 1.0],
+    "future_evidence_hits_1k_5k_10k": [0, 0, 0],
+    "expansion_dependency_1k_5k_10k": [0.0, 0.0, 0.0],
+    "synthetic_mechanics_pass_rate_1k_5k_10k": [1.0, 1.0, 1.0],
+    "heldout_state": "sealed_awaiting_control_confirmation"
   }
 }

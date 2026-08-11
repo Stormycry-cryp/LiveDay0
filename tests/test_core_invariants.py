@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -9,8 +10,101 @@ from liveday0.core import MemoryService
 from liveday0.db import connect, tenant_transaction
 from liveday0.exceptions import NotFound, SnapshotInvalidated, VersionConflict
 from liveday0.migrations import migrate_down, migrate_up, migration_status
-from liveday0.types import RecallOptions
+from liveday0.types import EvidenceInput, RecallOptions, SemanticInput
 from tests.helpers import evidence, event, fact, flatten_context
+
+
+def recalled_ids(context: dict) -> set[str]:
+    ids = {
+        str(item["id"])
+        for layer in context["layers"].values()
+        for item in layer
+        if item.get("id")
+    }
+    ids.update(handle["item_id"] for handle in context["expansion_handles"])
+    return ids
+
+
+def test_recall_as_of_excludes_future_cards(service):
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    old = service.observe(
+        EvidenceInput("text", "test", "timeline anchor earlier state", occurred_at=start, idempotency_key="as-of-old"),
+        semantics=[
+            SemanticInput(
+                "fact",
+                {"proposition": "timeline anchor earlier state", "scope": "test"},
+                canonical_key="as-of-old",
+                valid_at=start,
+            )
+        ],
+    )["card_ids"][0]
+    future_time = start + timedelta(days=20)
+    future = service.observe(
+        EvidenceInput("text", "test", "timeline anchor future state", occurred_at=future_time, idempotency_key="as-of-future"),
+        semantics=[
+            SemanticInput(
+                "fact",
+                {"proposition": "timeline anchor future state", "scope": "test"},
+                canonical_key="as-of-future",
+                valid_at=future_time,
+            )
+        ],
+    )["card_ids"][0]
+
+    context = service.recall(
+        "timeline anchor state",
+        options=RecallOptions(as_of=start + timedelta(days=10)),
+    )
+
+    assert str(old) in recalled_ids(context)
+    assert str(future) not in recalled_ids(context)
+
+
+def test_possessive_anchor_recalls_repeated_multi_items(service):
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    anchor = "anchor-abcdef123456"
+    expected = []
+    for slot in range(20):
+        state = "content:high" if slot < 19 else "content:mid"
+        content = f"anonymous behavior {anchor} slot {slot} quarter {slot // 5 + 1} state {state}"
+        card_id = service.observe(
+            EvidenceInput("text", "test", content, occurred_at=start + timedelta(days=slot), idempotency_key=f"target-{slot}"),
+            semantics=[
+                SemanticInput(
+                    "fact",
+                    {"proposition": content, "scope": "anonymous source-derived behavior bucket"},
+                    canonical_key=f"target-{slot}",
+                    valid_at=start + timedelta(days=slot),
+                )
+            ],
+        )["card_ids"][0]
+        if 14 <= slot <= 18:
+            expected.append(str(card_id))
+    for index in range(80):
+        other_anchor = f"anchor-noise{index:06d}"
+        content = f"anonymous behavior {other_anchor} slot 19 quarter 4 state content:high"
+        service.observe(
+            EvidenceInput(
+                "text", "test", content,
+                occurred_at=start + timedelta(days=30 + index),
+                idempotency_key=f"noise-{index}",
+            ),
+            semantics=[
+                SemanticInput(
+                    "fact",
+                    {"proposition": content, "scope": "anonymous source-derived behavior bucket"},
+                    canonical_key=f"noise-{index}",
+                    valid_at=start + timedelta(days=30 + index),
+                )
+            ],
+        )
+
+    context = service.recall(
+        f"What is anonymous entity {anchor}'s repeated behavior state? Retrieve content:high.",
+        options=RecallOptions(candidate_limit=64, final_limit=10),
+    )
+
+    assert set(expected) <= recalled_ids(context)
 
 
 def test_observe_is_idempotent_and_does_not_duplicate_semantics(service):
