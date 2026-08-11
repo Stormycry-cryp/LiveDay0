@@ -1,0 +1,79 @@
+{
+  "schema_version": "anonymous-behavior-source-matrix-v3b",
+  "decision_at": "2026-08-11T16:00:00+08:00",
+  "state": "AUTHORIZED_PREFLIGHT_PENDING",
+  "real_quota": {
+    "source_families": 3,
+    "entities": 600,
+    "observations": 12000,
+    "cases": 900
+  },
+  "synthetic_boundary": {
+    "required_marker": "evidence_origin=synthetic",
+    "allowed_roles": [
+      "query_interface",
+      "perturbation",
+      "near_duplicate",
+      "cancellation_reversal",
+      "stale_marker",
+      "deletion_operation",
+      "lifecycle_supersession"
+    ],
+    "excluded_real_denominators": [
+      "source_families",
+      "entities",
+      "observations",
+      "evidence_languages",
+      "real_behavior_categories"
+    ]
+  },
+  "sources": [
+    {
+      "family": "oulad",
+      "collection_origin": "The Open University learner VLE activity",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C5KK69",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+      "download_url": "https://archive.ics.uci.edu/static/public/349/open+university+learning+analytics+dataset.zip",
+      "license": "CC BY 4.0",
+      "entity_quota": 120,
+      "observation_quota": 2400,
+      "case_quota": 180,
+      "preflight_state": "pending"
+    },
+    {
+      "family": "online_retail_ii",
+      "collection_origin": "UK non-store online retailer transactions",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C5CG6D",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+      "download_url": "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip",
+      "license": "CC BY 4.0",
+      "entity_quota": 300,
+      "observation_quota": 6000,
+      "case_quota": 450,
+      "preflight_state": "pending"
+    },
+    {
+      "family": "electricity_load_diagrams",
+      "collection_origin": "Portuguese electricity consumption clients",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C58C86",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/321/electricityloaddiagrams20112014",
+      "download_url": "https://archive.ics.uci.edu/static/public/321/electricityloaddiagrams20112014.zip",
+      "license": "CC BY 4.0",
+      "entity_quota": 180,
+      "observation_quota": 3600,
+      "case_quota": 270,
+      "preflight_state": "pending"
+    }
+  ],
+  "collection_state": {
+    "downloaded_sources": 0,
+    "eligible_real_entities": 0,
+    "frozen_real_entities": 0,
+    "frozen_real_observations": 0,
+    "frozen_cases": 0,
+    "red_baseline_runs": 0
+  }
+}
