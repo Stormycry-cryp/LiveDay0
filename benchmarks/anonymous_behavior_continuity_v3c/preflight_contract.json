@@ -1,0 +1,74 @@
+{
+  "schema_version": "anonymous-behavior-preflight-contract-v3c",
+  "state": "FROZEN_BEFORE_SOURCE_INSPECTION",
+  "command": "python -m benchmarks.anonymous_behavior_continuity_v3c.preflight --source-dir <temporary_exact_snapshots> --output-dir <empty_preflight_output>",
+  "input_files": {
+    "oulad.zip": {
+      "sha256": "f2ed1902616c1fe8d2824d872c0b7d2d72be435bf0124d077044fe4be2c6d3e4",
+      "bytes": 46748244
+    },
+    "retail.zip": {
+      "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+      "bytes": 45622418
+    },
+    "electricity.zip": {
+      "sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1",
+      "bytes": 261335609
+    }
+  },
+  "fixed_rules": {
+    "slots": 20,
+    "minimum_source_span_days": 90,
+    "minimum_exact_signature_k": 5,
+    "maximum_selected_fraction_per_signature": 0.5,
+    "near_duplicate_similarity_threshold": 0.9,
+    "cross_version_exclusion_before_v3c_projection": true,
+    "minimum_real_entities": 90,
+    "minimum_real_observations": 1800,
+    "minimum_entities_per_split": 30,
+    "minimum_cases_per_evaluation_split": 90,
+    "minimum_near_duplicate_components_per_evaluation_split": 6,
+    "maximum_component_fraction_per_evaluation_split": 0.35,
+    "minimum_source_families": 2,
+    "maximum_source_fraction_per_evaluation_split": 0.8
+  },
+  "allowed_outputs": [
+    "preflight_result.json",
+    "preflight_report.md"
+  ],
+  "required_aggregate_result_fields": [
+    "all_snapshot_identities_pass",
+    "all_schema_and_license_checks_pass",
+    "v3b_public_signatures_reconstructed",
+    "cross_version_excluded_entities_by_source",
+    "base_eligible_entities_by_source",
+    "v3c_projected_entities_by_source",
+    "exact_k_eligible_entities_by_source",
+    "privacy_capacity_by_source",
+    "case_eligible_entities_by_source",
+    "near_duplicate_components_by_source",
+    "component_split_capacity",
+    "mia_reidentification_feasibility",
+    "freeze_allowed",
+    "errors"
+  ],
+  "forbidden_output_fields_or_values": [
+    "source entity identifiers",
+    "deterministic hashes of source identifiers",
+    "source-to-release mappings",
+    "exact timestamps",
+    "raw behavior observations or curves",
+    "transaction products, prices, quantities, countries, or invoices",
+    "learner demographics, geography, education, disability, score, or outcome",
+    "case queries, labels, expected IDs, forbidden future IDs, or heldout rows"
+  ],
+  "exit_contract": {
+    "0": "preflight completed and freeze_allowed=true",
+    "2": "preflight completed and freeze_allowed=false",
+    "other": "identity, schema, runtime, or output-safety failure; freeze_allowed=false"
+  },
+  "overwrite_policy": "refuse_if_any_allowed_output_exists",
+  "source_rows_may_be_inspected_only_after_all_snapshot_identities_pass": true,
+  "frozen_artifacts_may_be_written": false,
+  "red_or_recall_may_run": false
+}
