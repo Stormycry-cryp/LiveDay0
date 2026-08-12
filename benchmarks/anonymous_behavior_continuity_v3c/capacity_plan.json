@@ -1,0 +1,82 @@
+{
+  "schema_version": "anonymous-behavior-capacity-plan-v3c",
+  "state": "M0_CONTRACT_FROZEN_M1_SNAPSHOTS_ABSENT",
+  "parent_v3b_closeout_commit": "0ee63e50e5896cfbdcc652a38854586db4fed607",
+  "v3b_heldout_boundary": {
+    "unique_run_consumed": true,
+    "case_level_access_allowed": false,
+    "rerun_allowed": false,
+    "aggregate_decision": "NO-GO_HELDOUT_RECALL"
+  },
+  "authorized_sources": {
+    "oulad": {
+      "doi": "10.24432/C5KK69",
+      "archive_sha256": "f2ed1902616c1fe8d2824d872c0b7d2d72be435bf0124d077044fe4be2c6d3e4",
+      "archive_bytes": 46748244,
+      "v3b_base_eligible": 2615,
+      "v3b_exact_k_eligible": 207,
+      "pre_projection_v3c_mathematical_ceiling": 2408
+    },
+    "online_retail_ii": {
+      "doi": "10.24432/C5CG6D",
+      "archive_sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+      "archive_bytes": 45622418,
+      "v3b_base_eligible": 52,
+      "v3b_exact_k_eligible": 5,
+      "pre_projection_v3c_mathematical_ceiling": 47
+    },
+    "electricity_load_diagrams": {
+      "doi": "10.24432/C58C86",
+      "archive_sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1",
+      "archive_bytes": 261335609,
+      "v3b_base_eligible": 370,
+      "v3b_exact_k_eligible": 233,
+      "pre_projection_v3c_mathematical_ceiling": 137
+    }
+  },
+  "prior_public_release_aggregate": {
+    "v3b_real_entities": 217,
+    "v3b_reconstructable_source_signatures": 19,
+    "v3b_reconstructable_source_near_duplicate_components": 5,
+    "source_entity_mapping_retained": false
+  },
+  "cross_version_exclusion": {
+    "same_source_exact_signature": true,
+    "same_source_similarity_at_least": 0.9,
+    "exclude_entire_possible_membership_component": true,
+    "computed_before_v3c_projection": true
+  },
+  "freeze_gate": {
+    "preferred_entity_cap": 150,
+    "minimum_real_entities": 90,
+    "minimum_real_observations": 1800,
+    "minimum_entities_per_split": 30,
+    "minimum_test_cases": 90,
+    "minimum_heldout_cases": 90,
+    "cases_per_evaluation_entity": 3,
+    "minimum_near_duplicate_components_per_evaluation_split": 6,
+    "maximum_component_fraction_per_evaluation_split": 0.35,
+    "minimum_source_families": 2,
+    "maximum_source_fraction_per_evaluation_split": 0.8,
+    "minimum_exact_signature_k": 5,
+    "maximum_selected_fraction_per_signature": 0.5,
+    "minimum_source_span_days": 90,
+    "slots": 20
+  },
+  "capacity_status": {
+    "snapshot_presence_checked_at": "2026-08-12T13:05:35+08:00",
+    "snapshot_presence_search_scope": [
+      "/Users/chenyunzhe/.Trash",
+      "/Users/chenyunzhe/Downloads",
+      "/Users/chenyunzhe/Documents/Codex_Project/LiveDay0"
+    ],
+    "snapshots_present": false,
+    "source_rows_inspected": false,
+    "v3c_eligible_entities": null,
+    "v3c_case_eligible_entities": null,
+    "v3c_split_feasible": null,
+    "freeze_allowed": false,
+    "next_gate": "M1_EXACT_SNAPSHOT_PREFLIGHT"
+  },
+  "synthetic_real_quota_contribution": 0
+}
