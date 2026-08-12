@@ -1,0 +1,194 @@
+{
+  "schema_version": "anonymous-behavior-source-matrix-v3b",
+  "decision_at": "2026-08-11T16:00:00+08:00",
+  "preflight_completed_at": "2026-08-11T16:23:00+08:00",
+  "pilot_decision_at": "2026-08-11T17:00:00+08:00",
+  "pilot_frozen_at": "2026-08-11T17:15:37+08:00",
+  "state": "HELDOUT_HARNESS_READY_RUN_NOT_AUTHORIZED",
+  "freeze_allowed": true,
+  "license_verification": {
+    "license": "CC BY 4.0",
+    "official_pages_checked_at": "2026-08-11",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+    "robots_url_status": "https://archive.ics.uci.edu/robots.txt returned HTTP 404",
+    "access_scope": "official metadata records and three official static archives only"
+  },
+  "real_quota": {
+    "source_families": 3,
+    "entities_upper_bound": 217,
+    "observations_upper_bound": 4340,
+    "cases_target_approximate": 325,
+    "actual_freeze_is_authoritative": true
+  },
+  "actual_frozen_real": {
+    "source_families": 3,
+    "entities": 217,
+    "observations": 4340,
+    "cases": 312,
+    "test_cases": 222,
+    "heldout_cases_sealed": 90
+  },
+  "synthetic_boundary": {
+    "required_marker": "evidence_origin=synthetic",
+    "allowed_roles": [
+      "query_interface",
+      "perturbation",
+      "near_duplicate",
+      "near_duplicate_noise",
+      "cancellation_reversal",
+      "synthetic_reversal",
+      "stale_marker",
+      "deletion_operation",
+      "deletion_propagation",
+      "lifecycle_supersession",
+      "stress_coverage"
+    ],
+    "excluded_real_denominators": [
+      "source_families",
+      "entities",
+      "observations",
+      "evidence_languages",
+      "real_behavior_categories"
+    ],
+    "created_counts": {
+      "entities": 0,
+      "observations": 0,
+      "query_interface_cases": 312,
+      "mechanics_test_cases": 50,
+      "stress_cards_at_1k_5k_10k": [0, 1220, 6220]
+    }
+  },
+  "sources": [
+    {
+      "family": "oulad",
+      "collection_origin": "The Open University learner VLE activity",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C5KK69",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+      "download_url": "https://archive.ics.uci.edu/static/public/349/open+university+learning+analytics+dataset.zip",
+      "license": "CC BY 4.0",
+      "downloaded_at": "2026-08-11T16:17:03+08:00",
+      "archive_sha256": "f2ed1902616c1fe8d2824d872c0b7d2d72be435bf0124d077044fe4be2c6d3e4",
+      "archive_bytes": 46748244,
+      "source_schema": {
+        "tables": ["studentInfo", "studentVle", "vle"],
+        "join_fields_ephemeral_only": ["id_student", "id_site", "code_module", "code_presentation"],
+        "retained_projection": ["relative_slot", "activity_family", "activity_count_bucket"]
+      },
+      "original_preflight_entity_quota": 120,
+      "original_preflight_observation_quota": 2400,
+      "original_preflight_case_quota": 180,
+      "base_eligible_entities": 2615,
+      "k_anonymous_entities": 207,
+      "privacy_selection_capacity": 100,
+      "pilot_frozen_entities": 100,
+      "pilot_frozen_observations": 2000,
+      "pilot_split_entities": {"train": 0, "test": 74, "heldout": 26},
+      "original_preflight_entity_deficit": 20,
+      "preflight_state": "failed_privacy_capacity"
+    },
+    {
+      "family": "online_retail_ii",
+      "collection_origin": "UK non-store online retailer transactions",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C5CG6D",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+      "download_url": "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip",
+      "license": "CC BY 4.0",
+      "downloaded_at": "2026-08-11T16:17:03+08:00",
+      "archive_sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+      "archive_bytes": 45622418,
+      "source_schema": {
+        "sheets": ["Year 2009-2010", "Year 2010-2011"],
+        "columns": ["Invoice", "StockCode", "Description", "Quantity", "InvoiceDate", "Price", "Customer ID", "Country"],
+        "join_fields_ephemeral_only": ["Customer ID", "Invoice"],
+        "retained_projection": ["relative_slot", "purchase_cancellation_state", "activity_bucket"]
+      },
+      "original_preflight_entity_quota": 300,
+      "original_preflight_observation_quota": 6000,
+      "original_preflight_case_quota": 450,
+      "base_eligible_entities": 52,
+      "k_anonymous_entities": 5,
+      "privacy_selection_capacity": 2,
+      "pilot_frozen_entities": 2,
+      "pilot_frozen_observations": 40,
+      "pilot_split_entities": {"train": 0, "test": 0, "heldout": 2},
+      "original_preflight_entity_deficit": 298,
+      "preflight_state": "failed_base_quota_and_privacy_capacity"
+    },
+    {
+      "family": "electricity_load_diagrams",
+      "collection_origin": "Portuguese electricity consumption clients",
+      "distributor": "UCI Machine Learning Repository",
+      "doi": "10.24432/C58C86",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/321/electricityloaddiagrams20112014",
+      "download_url": "https://archive.ics.uci.edu/static/public/321/electricityloaddiagrams20112014.zip",
+      "license": "CC BY 4.0",
+      "downloaded_at": "2026-08-11T16:17:45+08:00",
+      "archive_sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1",
+      "archive_bytes": 261335609,
+      "source_schema": {
+        "timestamp_column": "unnamed timestamp column",
+        "anonymous_client_columns": 370,
+        "client_columns_ephemeral_only": true,
+        "retained_projection": ["relative_slot", "load_state_relative_to_entity_median"]
+      },
+      "original_preflight_entity_quota": 180,
+      "original_preflight_observation_quota": 3600,
+      "original_preflight_case_quota": 270,
+      "base_eligible_entities": 370,
+      "k_anonymous_entities": 233,
+      "privacy_selection_capacity": 115,
+      "pilot_frozen_entities": 115,
+      "pilot_frozen_observations": 2300,
+      "pilot_split_entities": {"train": 113, "test": 0, "heldout": 2},
+      "original_preflight_entity_deficit": 65,
+      "preflight_state": "failed_privacy_capacity"
+    }
+  ],
+  "collection_state": {
+    "temporary_official_archives_downloaded_during_preflight": 3,
+    "active_preflight_archives_retained": 0,
+    "cleanup_state": "all preflight and Pilot raw snapshot directories moved to macOS Trash; recoverable until Trash is emptied",
+    "archives_committed_or_redistributed": 0,
+    "eligible_real_entities_selected": 217,
+    "frozen_real_entities": 217,
+    "frozen_real_observations": 4340,
+    "frozen_real_derived_cases": 312,
+    "frozen_synthetic_mechanics_cases": 50,
+    "red_test_baseline_runs": 3,
+    "heldout_runs": 0
+  },
+  "release_audit": {
+    "passed": true,
+    "nearest_signature_mia_auc": 0.5,
+    "maximum_signature_membership_posterior": 0.5,
+    "minimum_exact_signature_matches": 5,
+    "minimum_leave_one_slot_out_matches": 5,
+    "unique_reidentification_matches": 0,
+    "entity_split_leaks": 0,
+    "signature_split_leaks": 0,
+    "near_duplicate_cluster_split_leaks": 0,
+    "future_expected_label_leaks": 0,
+    "source_identifier_values_in_release": 0
+  },
+  "red_test_baseline": {
+    "result_sha256": "dac2dd84ec2efa0cd6de4df2b3962dec4ece8cceb9a03d68ca01a6d5958550fa",
+    "heldout_loaded": false,
+    "recall_at_10_1k_5k_10k": [0.5565, 0.5577, 0.5577],
+    "repeated_behavior_completeness_1k_5k_10k": [0.0243, 0.027, 0.027],
+    "future_evidence_hits_1k_5k_10k": [314, 309, 311],
+    "synthetic_mechanics_pass_rate_1k_5k_10k": [1.0, 1.0, 1.0]
+  },
+  "test_candidate": {
+    "result_sha256": "027c19e1ece2264f804ddcadfc98de6b80224181ae81fdb9048a210bf3169ebc",
+    "heldout_loaded": false,
+    "parameters_locked": true,
+    "recall_at_10_1k_5k_10k": [1.0, 1.0, 1.0],
+    "repeated_behavior_completeness_1k_5k_10k": [1.0, 1.0, 1.0],
+    "future_evidence_hits_1k_5k_10k": [0, 0, 0],
+    "expansion_dependency_1k_5k_10k": [0.0, 0.0, 0.0],
+    "synthetic_mechanics_pass_rate_1k_5k_10k": [1.0, 1.0, 1.0],
+    "heldout_state": "sealed_awaiting_control_confirmation"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "anonymous-behavior-recall-v3b-heldout-exit-receipt-v1",
+  "command": "python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness --run-heldout-once --output benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.json",
+  "started_at_utc": "2026-08-12T03:19:05Z",
+  "finished_at_utc": "2026-08-12T03:19:45Z",
+  "exit_code": 0,
+  "unique_run_consumed": true,
+  "result": {
+    "path": "benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.json",
+    "exists": true,
+    "bytes": 12751,
+    "sha256": "5a9d726dd0ebbf5db5d04acf21dadcc8d56b9bae59ca17c17189450ccd62dcef"
+  },
+  "stdout": {
+    "path": "benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.stdout.log",
+    "exists": true,
+    "bytes": 12751,
+    "sha256": "5a9d726dd0ebbf5db5d04acf21dadcc8d56b9bae59ca17c17189450ccd62dcef"
+  },
+  "stderr": {
+    "path": "benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.stderr.log",
+    "exists": true,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

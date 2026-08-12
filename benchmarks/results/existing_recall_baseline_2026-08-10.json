@@ -1,0 +1,25 @@
+{
+  "environment": {
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.14",
+    "postgresql": "17.10",
+    "pgvector_installed": false
+  },
+  "sample": {
+    "tenant_count": 1,
+    "canonical_cards": 160,
+    "recall_runs_per_case": 30,
+    "overlay_runs_per_case": 50
+  },
+  "recall": [
+    {"parameters":{"card_tokens":120,"context_tokens":800,"candidate_relation_final":[24,12,6]},"latency_ms":{"median":48.0,"p95":91.89,"max":101.9},"cards_in_context":6,"estimated_tokens":606,"omitted_handles":0,"under_800ms":true},
+    {"parameters":{"card_tokens":180,"context_tokens":1600,"candidate_relation_final":[48,24,12]},"latency_ms":{"median":55.69,"p95":89.29,"max":93.03},"cards_in_context":11,"estimated_tokens":1547,"omitted_handles":1,"under_800ms":true},
+    {"parameters":{"card_tokens":240,"context_tokens":2400,"candidate_relation_final":[96,48,20]},"latency_ms":{"median":46.54,"p95":70.96,"max":115.06},"cards_in_context":15,"estimated_tokens":2315,"omitted_handles":5,"under_800ms":true}
+  ],
+  "pending_delta_overlay": [
+    {"pending_deltas":1,"latency_ms":{"median":9.12,"p95":11.71}},
+    {"pending_deltas":4,"latency_ms":{"median":9.47,"p95":20.93}},
+    {"pending_deltas":8,"latency_ms":{"median":8.6,"p95":10.25}},
+    {"pending_deltas":16,"latency_ms":{"median":10.1,"p95":15.92}}
+  ]
+}

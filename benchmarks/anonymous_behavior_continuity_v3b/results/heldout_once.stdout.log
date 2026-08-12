@@ -1,0 +1,480 @@
+{
+  "schema_version": "anonymous-behavior-recall-v3b-pilot",
+  "generated_at": "2026-08-12T11:19:05+08:00",
+  "engine": {
+    "name": "LiveDay0 MemoryService.recall",
+    "run_stage": "heldout_once",
+    "benchmark_split": "heldout",
+    "query_embeddings": false,
+    "paid_provider_calls": 0,
+    "heldout_cases_loaded": true
+  },
+  "artifact_audit": {
+    "passed": true,
+    "errors": [],
+    "heldout_case_file_parsed": true,
+    "heldout_byte_hash_verified": true,
+    "real_entities": 217,
+    "real_observations": 4340,
+    "test_real_derived_cases": 222,
+    "test_synthetic_mechanics_cases": 50,
+    "heldout_case_content_logged": false
+  },
+  "runs": [
+    {
+      "scale_cards": 1000,
+      "actual_cards": 1000,
+      "real_source_derived_cards": 1000,
+      "synthetic_stress_cards": 0,
+      "synthetic_mechanics_cards": 0,
+      "load_ms": 1143.072,
+      "untimed_warmup_ms": {
+        "queries": 6,
+        "median": 38.086,
+        "max": 60.084
+      },
+      "real_derived_case_count": 90,
+      "synthetic_mechanics_case_count": 0,
+      "recall_at_1": 0.2727,
+      "recall_at_1_ci95_wilson": [
+        0.2275,
+        0.3232
+      ],
+      "recall_at_5": 0.9939,
+      "recall_at_5_ci95_wilson": [
+        0.9782,
+        0.9983
+      ],
+      "recall_at_10": 0.9939,
+      "recall_at_10_ci95_wilson": [
+        0.9782,
+        0.9983
+      ],
+      "mrr": 1.0,
+      "ndcg_at_10": 0.9971,
+      "direct_context_coverage": 0.9939,
+      "expansion_dependency_rate": 0.0,
+      "repeated_behavior_completeness_at_10": 1.0,
+      "time_segment_continuity_at_10": 0.9867,
+      "synthetic_mechanics": {
+        "evaluated": false,
+        "reason": "synthetic mechanics are frozen test-only cases"
+      },
+      "latency_ms": {
+        "median": 35.076,
+        "p95": 48.646,
+        "max": 70.12
+      },
+      "failures": {
+        "missed_required_at_10": 2,
+        "synthetic_mechanics_missed_required_at_10": null,
+        "future_evidence_leakage": 0,
+        "cross_entity_tenant_leakage": 0,
+        "synthetic_forbidden_intrusion": null,
+        "deletion_resurrection": null
+      },
+      "category_distribution": {
+        "current_shift": 8,
+        "repeated_behavior": 30,
+        "stable_pattern": 22,
+        "time_segment_continuity": 30
+      },
+      "language_distribution": {
+        "en": 30,
+        "es": 30,
+        "zh": 30
+      },
+      "source_distribution": {
+        "electricity_load_diagrams": 6,
+        "online_retail_ii": 6,
+        "oulad": 78
+      },
+      "real_metrics_by_category": {
+        "current_shift": {
+          "cases": 8,
+          "expected_items": 8,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "repeated_behavior": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "stable_pattern": {
+          "cases": 22,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "time_segment_continuity": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9867,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_language": {
+        "en": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "es": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9867,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "zh": {
+          "cases": 30,
+          "expected_items": 30,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_source": {
+        "electricity_load_diagrams": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 0.9091,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "online_retail_ii": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "oulad": {
+          "cases": 78,
+          "expected_items": 286,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "synthetic_metrics_by_category": {},
+      "passed": false,
+      "case_details_redacted": true
+    },
+    {
+      "scale_cards": 5000,
+      "actual_cards": 5000,
+      "real_source_derived_cards": 2860,
+      "synthetic_stress_cards": 2140,
+      "synthetic_mechanics_cards": 0,
+      "load_ms": 5040.371,
+      "untimed_warmup_ms": {
+        "queries": 6,
+        "median": 56.905,
+        "max": 87.011
+      },
+      "real_derived_case_count": 90,
+      "synthetic_mechanics_case_count": 0,
+      "recall_at_1": 0.2727,
+      "recall_at_1_ci95_wilson": [
+        0.2275,
+        0.3232
+      ],
+      "recall_at_5": 0.9939,
+      "recall_at_5_ci95_wilson": [
+        0.9782,
+        0.9983
+      ],
+      "recall_at_10": 0.9939,
+      "recall_at_10_ci95_wilson": [
+        0.9782,
+        0.9983
+      ],
+      "mrr": 1.0,
+      "ndcg_at_10": 0.9971,
+      "direct_context_coverage": 0.9939,
+      "expansion_dependency_rate": 0.0,
+      "repeated_behavior_completeness_at_10": 1.0,
+      "time_segment_continuity_at_10": 0.9867,
+      "synthetic_mechanics": {
+        "evaluated": false,
+        "reason": "synthetic mechanics are frozen test-only cases"
+      },
+      "latency_ms": {
+        "median": 57.431,
+        "p95": 90.922,
+        "max": 124.211
+      },
+      "failures": {
+        "missed_required_at_10": 2,
+        "synthetic_mechanics_missed_required_at_10": null,
+        "future_evidence_leakage": 0,
+        "cross_entity_tenant_leakage": 0,
+        "synthetic_forbidden_intrusion": null,
+        "deletion_resurrection": null
+      },
+      "category_distribution": {
+        "current_shift": 8,
+        "repeated_behavior": 30,
+        "stable_pattern": 22,
+        "time_segment_continuity": 30
+      },
+      "language_distribution": {
+        "en": 30,
+        "es": 30,
+        "zh": 30
+      },
+      "source_distribution": {
+        "electricity_load_diagrams": 6,
+        "online_retail_ii": 6,
+        "oulad": 78
+      },
+      "real_metrics_by_category": {
+        "current_shift": {
+          "cases": 8,
+          "expected_items": 8,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "repeated_behavior": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "stable_pattern": {
+          "cases": 22,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "time_segment_continuity": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9867,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_language": {
+        "en": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "es": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9867,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "zh": {
+          "cases": 30,
+          "expected_items": 30,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_source": {
+        "electricity_load_diagrams": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 0.9091,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "online_retail_ii": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "oulad": {
+          "cases": 78,
+          "expected_items": 286,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "synthetic_metrics_by_category": {},
+      "passed": false,
+      "case_details_redacted": true
+    },
+    {
+      "scale_cards": 10000,
+      "actual_cards": 10000,
+      "real_source_derived_cards": 2860,
+      "synthetic_stress_cards": 7140,
+      "synthetic_mechanics_cards": 0,
+      "load_ms": 11033.78,
+      "untimed_warmup_ms": {
+        "queries": 6,
+        "median": 95.125,
+        "max": 122.919
+      },
+      "real_derived_case_count": 90,
+      "synthetic_mechanics_case_count": 0,
+      "recall_at_1": 0.2727,
+      "recall_at_1_ci95_wilson": [
+        0.2275,
+        0.3232
+      ],
+      "recall_at_5": 0.997,
+      "recall_at_5_ci95_wilson": [
+        0.983,
+        0.9995
+      ],
+      "recall_at_10": 0.997,
+      "recall_at_10_ci95_wilson": [
+        0.983,
+        0.9995
+      ],
+      "mrr": 1.0,
+      "ndcg_at_10": 0.9985,
+      "direct_context_coverage": 0.997,
+      "expansion_dependency_rate": 0.0,
+      "repeated_behavior_completeness_at_10": 1.0,
+      "time_segment_continuity_at_10": 0.9933,
+      "synthetic_mechanics": {
+        "evaluated": false,
+        "reason": "synthetic mechanics are frozen test-only cases"
+      },
+      "latency_ms": {
+        "median": 86.552,
+        "p95": 147.334,
+        "max": 236.645
+      },
+      "failures": {
+        "missed_required_at_10": 1,
+        "synthetic_mechanics_missed_required_at_10": null,
+        "future_evidence_leakage": 0,
+        "cross_entity_tenant_leakage": 0,
+        "synthetic_forbidden_intrusion": null,
+        "deletion_resurrection": null
+      },
+      "category_distribution": {
+        "current_shift": 8,
+        "repeated_behavior": 30,
+        "stable_pattern": 22,
+        "time_segment_continuity": 30
+      },
+      "language_distribution": {
+        "en": 30,
+        "es": 30,
+        "zh": 30
+      },
+      "source_distribution": {
+        "electricity_load_diagrams": 6,
+        "online_retail_ii": 6,
+        "oulad": 78
+      },
+      "real_metrics_by_category": {
+        "current_shift": {
+          "cases": 8,
+          "expected_items": 8,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "repeated_behavior": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "stable_pattern": {
+          "cases": 22,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "time_segment_continuity": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9933,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_language": {
+        "en": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "es": {
+          "cases": 30,
+          "expected_items": 150,
+          "recall_at_10": 0.9933,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "zh": {
+          "cases": 30,
+          "expected_items": 30,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "real_metrics_by_source": {
+        "electricity_load_diagrams": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 0.9545,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "online_retail_ii": {
+          "cases": 6,
+          "expected_items": 22,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        },
+        "oulad": {
+          "cases": 78,
+          "expected_items": 286,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "future_hits": 0
+        }
+      },
+      "synthetic_metrics_by_category": {},
+      "passed": false,
+      "case_details_redacted": true
+    }
+  ],
+  "input_identity": {
+    "split": "heldout",
+    "case_artifact": "cases_heldout.sealed.jsonl",
+    "case_sha256": "e8d154a43264b6353341e5e4a016a328815e703e5ae5a6f82b6789fc2b809530",
+    "case_bytes": 73720,
+    "manifest_sha256": "6c1d83dd4c0b2fd755a963ec1423b8b92ae8145f9b32957aacff00be15a8a384",
+    "locked_recall_commit": "55112b26edfb656a86ddf4b83d88746dd1e2fe99",
+    "locked_recall_tree": "d9346888b0c4694ba226dd650c01c7641e88e1d6",
+    "locked_candidate_artifact": "results/candidate_test_locked.json",
+    "locked_candidate_sha256": "027c19e1ece2264f804ddcadfc98de6b80224181ae81fdb9048a210bf3169ebc"
+  }
+}

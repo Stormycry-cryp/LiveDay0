@@ -1,0 +1,99 @@
+{
+  "schema_version": "longitudinal-human-source-matrix-v3",
+  "decision_at": "2026-08-11T14:43:46+08:00",
+  "freeze_gate": {
+    "state": "NO-GO_SOURCE_GATE",
+    "approved_independent_families": 1,
+    "required_independent_families": 3,
+    "approved_non_education_text_families": 0,
+    "required_non_education_text_families": 2,
+    "approved_evidence_languages": [],
+    "required_evidence_languages": [
+      "zh",
+      "en",
+      "es"
+    ],
+    "reason": "Only OULAD passes the reviewed license/access/adult-projection boundary, and it is education-only structured behavior. It cannot support the required life-continuity semantics or multilingual public text. No dataset or cases may be frozen from this matrix."
+  },
+  "eligible_supplement_only": [
+    {
+      "family": "oulad_uci",
+      "operator": "The Open University / UCI Machine Learning Repository",
+      "dataset": "Open University Learning Analytics Dataset",
+      "doi": "10.24432/C5KK69",
+      "dataset_page": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+      "publisher_page": "https://blog.stem.open.ac.uk/oulad-open-data-for-learning-analytics-released-2/",
+      "download_url": "https://archive.ics.uci.edu/static/public/349/open+university+learning+analytics+dataset.zip",
+      "license": "CC BY 4.0",
+      "license_evidence": "UCI metadata and The Open University release page state CC BY 4.0.",
+      "access": "Official static ZIP; no login, API key, profile route, search route, or paid provider required.",
+      "robots_api_boundary": "Use only the official dataset page/static archive route; do not crawl participant or profile pages.",
+      "human_evidence": "Source-provided anonymized daily VLE activity aggregates from real learners; no public text.",
+      "privacy_evidence": "Publisher reports anonymization using k-anonymity and l-diversity.",
+      "projection_boundary": "Eligibility may be checked ephemerally from age_band 35-55 or 55<=. A release must omit learner ID, module/presentation, age band, assessment, mark, outcome, region, gender, disability, education, deprivation, exact date, and every other demographic field.",
+      "deletion_boundary": "Regenerate from a revised upstream snapshot and remove matching non-reversible generalized profiles; retain content-free dataset-local tombstones only.",
+      "decision": "ELIGIBLE_SUPPLEMENT_ONLY",
+      "maximum_subject_share": 0.2,
+      "limitations": [
+        "education-only structured behavior",
+        "no source-authored public text",
+        "cannot prove preference evolution, relationship change, unfinished life items, recurring life events, or corrections",
+        "not yet downloaded or frozen"
+      ]
+    }
+  ],
+  "rejected_or_unverified": [
+    {
+      "family": "happydb",
+      "official_page": "https://github.com/megagonlabs/HappyDB",
+      "decision": "REJECT",
+      "reason": "The official repository makes the corpus downloadable but does not publish an explicit dataset redistribution license. Worker-linked personal prose also presents unresolved re-identification and withdrawal risks."
+    },
+    {
+      "family": "movielens_1m",
+      "official_page": "https://files.grouplens.org/datasets/movielens/ml-1m-README.txt",
+      "decision": "REJECT",
+      "reason": "The official README prohibits redistribution without separate permission; ratings also do not provide the required public textual life evidence."
+    },
+    {
+      "family": "lothian_diaries",
+      "official_page": "https://www.research.ed.ac.uk/en/datasets/lothian-diaries-dataset-1-may-september-2020/",
+      "decision": "REJECT",
+      "reason": "The release consists of one diary per participant rather than a multi-observation longitudinal subject, and the published participant code embeds demographic/location information prohibited by this contract."
+    },
+    {
+      "family": "pandemic_journaling_project",
+      "official_page": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12422429/",
+      "decision": "REJECT",
+      "reason": "Full journal text is controlled-access and the documented cohort includes participants aged 15-17. It is neither a public redistributable 35+ corpus nor safe for this freeze."
+    },
+    {
+      "family": "newcastle_data_diaries",
+      "official_page": "https://figshare.com/articles/dataset/Data_Diaries_Study/25488064",
+      "decision": "REJECT_CURRENT_SCOPE",
+      "reason": "The study is framed around young adults rather than a verifiable 35+ cohort, and the reviewed public route did not establish an eligible multi-entry participant projection. A CC BY label alone does not satisfy the age and identity gates."
+    },
+    {
+      "family": "public_forums_wikis_and_social_accounts",
+      "decision": "REJECT",
+      "reason": "Longitudinal linkage relies on public usernames, account IDs, URLs, or cross-post combinations that remain re-identifiable; deletion propagation and participant consent are not adequate for a frozen benchmark."
+    },
+    {
+      "family": "shared_chat_exports_private_diaries_and_restricted_research_corpora",
+      "decision": "REJECT",
+      "reason": "Private or controlled-access data is outside scope, and public release cannot be inferred from research access."
+    },
+    {
+      "family": "childes_ednet_and_unknown_age_corpora",
+      "decision": "REJECT",
+      "reason": "Minors are present or subjects aged 35 and older cannot be reliably isolated before persistence."
+    }
+  ],
+  "collection_state": {
+    "downloaded_sources": 0,
+    "frozen_subjects": 0,
+    "frozen_observations": 0,
+    "frozen_cases": 0,
+    "red_baseline_runs": 0
+  }
+}
