@@ -171,10 +171,11 @@ The real query interface is balanced 104/104/104 zh/en/es and remains synthetic
 interface text, not source-language evidence. Fifty additional synthetic test
 mechanics cases are isolated from real denominators.
 
-Release MIA/re-identification and split audits passed. The unchanged test RED is
-red at all scales; heldout remains sealed. Recall changes are now permitted on
-test only under the existing no-label-relaxation and no-full-corpus-traversal
-rules.
+Release MIA/re-identification and split audits passed. The unchanged test RED
+was red at all scales; heldout remained sealed through test-only tuning and was
+later consumed once under the decision recorded below. Recall changes were
+permitted on test only under the existing no-label-relaxation and
+no-full-corpus-traversal rules.
 
 The Pilot uses the strictly smaller projection already exercised by preflight:
 Retail keeps only relative slot, purchase/cancellation state, and activity
@@ -184,13 +185,11 @@ the prospective design were omitted rather than inferred. This is a
 privacy-conservative coverage reduction and limits the Pilot's behavioral
 semantics; it is not synthetic completion.
 
-The test-only recall candidate is locked after adding an explicit `as_of`
+The test-only recall candidate was locked after adding an explicit `as_of`
 cutoff and English possessive-anchor normalization. Candidate/final limits stay
 64/10; no frozen artifact, label, expected set, window, split, privacy rule, or
 source changed. Test Recall@10, repeated completeness, and synthetic mechanics
-are 1.0 at 1k/5k/10k with zero future/leakage/deletion failures. Heldout remains
-sealed and requires an explicit control-plane confirmation before its single
-run.
+are 1.0 at 1k/5k/10k with zero future/leakage/deletion failures.
 
 The one-time run must use the deterministic heldout harness. Its default is
 test; heldout requires `--run-heldout-once`, an exact locked-candidate and
@@ -200,3 +199,25 @@ cannot be mixed into the heldout person split; their locked test result is
 reported separately. Heldout output contains only aggregate metrics and frozen
 artifact identities, never query, expected-ID, or case-level rows. Preparing
 and testing the harness does not consume the single heldout run.
+
+## One-time heldout decision
+
+The authorized one-time heldout run was consumed on 2026-08-12 without any
+code, parameter, frozen artifact, label, expected-set, window, split, privacy,
+or source change. The canonical result is
+`benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.json`
+(SHA-256 `5a9d726dd0ebbf5db5d04acf21dadcc8d56b9bae59ca17c17189450ccd62dcef`).
+The command exited 0, the artifact audit passed, and case-level rows and
+identifiers are absent from the result and stdout.
+
+The heldout release decision is **NO-GO**. At 1k/5k/10k, Recall@10 was
+0.9939/0.9939/0.9970 and missed-required counts were 2/2/1, so all three runs
+failed the frozen exact-pass rule. Repeated completeness stayed 1.0, expansion
+dependency stayed 0, and future-evidence and cross-entity leakage stayed 0.
+Synthetic mechanics, deletion resurrection, and synthetic intrusion remain
+the separately locked test-only 50/50 evidence; they were intentionally not
+mixed into heldout and are therefore not re-evaluated by the heldout run.
+
+No rerun is permitted. The misses and latency generalization gap may inform a
+future benchmark version or newly frozen split, but this sealed heldout cannot
+be used for tuning or repair validation.

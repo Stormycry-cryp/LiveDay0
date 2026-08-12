@@ -33,14 +33,13 @@ membership posterior 0.5, exact and leave-one-slot-out minimum match count 5,
 and zero unique re-identification, entity/signature/cluster split leaks, frozen
 future-label leaks, or retained source-ID values.
 
-The unchanged recall engine RED result is
-`results/red_test_baseline.json`. Heldout cases were byte-hash verified but not
-parsed or run. See `pilot_report.md` for metrics and limitations.
+The unchanged recall engine RED result is `results/red_test_baseline.json`.
+See `pilot_report.md` for test and one-time heldout metrics and limitations.
 
 The locked test-only candidate is `results/candidate_test_locked.json`. It adds
 an explicit recall `as_of` cutoff and normalizes English possessive anchors; it
 does not change frozen data, cases, labels, windows, privacy gates, candidate or
-final limits. Heldout remains sealed pending control-plane confirmation.
+final limits.
 
 ## Deterministic heldout harness
 
@@ -51,7 +50,7 @@ final limits. Heldout remains sealed pending control-plane confirmation.
 python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness --audit-only
 ```
 
-Heldout requires the distinct `--run-heldout-once` flag and a new output path:
+Heldout required the distinct `--run-heldout-once` flag and a new output path:
 
 ```bash
 python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness \
@@ -59,8 +58,7 @@ python -m benchmarks.anonymous_behavior_continuity_v3b.heldout_harness \
   --output benchmarks/anonymous_behavior_continuity_v3b/results/heldout_once.json
 ```
 
-That exact output path is mandatory, and the command must not run until
-separately authorized after the harness commit is locked. The selector verifies
+That exact output path was mandatory. The selector verifies
 the locked test candidate SHA, manifest hash, and sealed case SHA-256/byte size
 before parsing. It uses only train+heldout observations, does not load the
 frozen synthetic test mechanics, refuses to overwrite an existing result, and
@@ -69,3 +67,20 @@ carries split, case artifact/hash/bytes, manifest hash, candidate hash, and the
 locked recall commit/tree. Synthetic intrusion and deletion metrics are
 therefore reported from the locked test candidate, not re-evaluated or mixed
 into the heldout person split.
+
+## One-time heldout result
+
+The separately authorized run was consumed once on 2026-08-12 and exited 0.
+The canonical aggregate result is `results/heldout_once.json` (SHA-256
+`5a9d726dd0ebbf5db5d04acf21dadcc8d56b9bae59ca17c17189450ccd62dcef`);
+`results/heldout_once.exit.json` records the command, timestamps, exit code,
+and result/stdout/stderr identities. Case-level rows and identifying fields are
+absent.
+
+The release decision is **NO-GO**: 1k/5k/10k Recall@10 is
+0.9939/0.9939/0.9970 with 2/2/1 missed required items, so each scale fails the
+frozen exact-pass rule. Repeated completeness is 1.0, expansion dependency and
+future/cross-entity leakage are 0. The heldout split intentionally excludes
+synthetic mechanics; their locked test-only result remains 50/50 with zero
+synthetic intrusion and deletion resurrection. The heldout may not be rerun or
+used to tune a repair.

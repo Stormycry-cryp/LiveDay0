@@ -69,19 +69,17 @@ intrusion, deletion resurrection, and cross-tenant leakage were zero. These
 synthetic results are reported separately and do not change the real-derived
 Recall denominator.
 
-## Heldout and decision
+## Heldout boundary before the single run
 
-`cases_heldout.sealed.jsonl` is frozen at SHA-256
+`cases_heldout.sealed.jsonl` was frozen at SHA-256
 `e8d154a43264b6353341e5e4a016a328815e703e5ae5a6f82b6789fc2b809530`.
-The runner verified its bytes but did not parse or execute it. The accepted v2
+Before authorization, the runner verified its bytes but did not parse or
+execute it. The accepted v2
 heldout artifact remains unchanged and still contains its two real 1k Chinese
 `repeated_event` failures.
 
-The Pilot may now enter recall improvement on test only. The first permitted
-work is a minimal time-cutoff guard plus repeated-event multi-item retrieval;
-code and thresholds must then freeze before the single heldout run. Labels,
-expected sets, windows, anonymity rules, and full-corpus traversal may not be
-relaxed to improve the score.
+The Pilot then entered recall improvement on test only. Labels, expected sets,
+windows, anonymity rules, and full-corpus traversal were not relaxed.
 
 ## Locked test-only candidate
 
@@ -110,21 +108,43 @@ zero because every required item is direct context. Median latency changed by
 The candidate result SHA-256 is
 `027c19e1ece2264f804ddcadfc98de6b80224181ae81fdb9048a210bf3169ebc`.
 Heldout was neither parsed nor run by the candidate runner. Code and parameters
-are locked on test; a one-time heldout run requires the next explicit
-control-plane confirmation.
+were locked on test before the separate one-time authorization.
 
-## Heldout harness gate
+## One-time heldout result and decision
 
-A deterministic harness is prepared but has not executed heldout. The direct
-runner remains test-only; the wrapper defaults to test and requires the exact
-`--run-heldout-once` flag plus the non-existing canonical output path. Before
-any case is loaded it verifies the locked candidate SHA and the selected
-artifact SHA-256/byte size against the frozen manifest. The heldout plan uses
-train+heldout observations only and no synthetic test mechanics. Case-level
-rows are omitted from heldout stdout and the result artifact; aggregate metrics
-and frozen input identities remain.
+The deterministic harness consumed its only authorized heldout run on
+2026-08-12. The exact locked candidate, recall commit/tree, manifest, heldout
+SHA/size, PostgreSQL configuration, clean worktree, and four absent canonical
+paths were verified immediately before execution. The command exited 0.
+
+| Scale | Recall@1 | Recall@5/10 | MRR | nDCG@10 | Direct context | Repeated completeness | Time continuity | Missed required | Future hits | Median / P95 / max ms |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1k | 0.2727 | 0.9939 | 1.0000 | 0.9971 | 0.9939 | 1.0000 | 0.9867 | 2 | 0 | 35.076 / 48.646 / 70.120 |
+| 5k | 0.2727 | 0.9939 | 1.0000 | 0.9971 | 0.9939 | 1.0000 | 0.9867 | 2 | 0 | 57.431 / 90.922 / 124.211 |
+| 10k | 0.2727 | 0.9970 | 1.0000 | 0.9985 | 0.9970 | 1.0000 | 0.9933 | 1 | 0 | 86.552 / 147.334 / 236.645 |
+
+Expansion dependency and cross-entity leakage are 0 at every scale. The only
+misses are in time-segment continuity: the descriptive Electricity stratum has
+Recall@10 0.9091/0.9091/0.9545; Spanish query-interface Recall@10 is
+0.9867/0.9867/0.9933. These strata are below 20 cases and remain descriptive,
+not powered comparisons. No case-level row, query, entity/source ID, expected
+ID, or retrieved ID appears in stdout or the canonical result.
+
+Heldout median latency is +2.44%/+6.58%/+10.44% versus the locked test candidate
+at 1k/5k/10k; P95 is +2.34%/+35.09%/+53.38%. The result is local single-process
+PostgreSQL evidence, not production latency.
+
+The final release decision is **NO-GO** because the frozen pass rule requires
+Recall@10 1.0 and zero failures at every scale. The observed 2/2/1 missed items
+make all three runs `passed=false`; the high aggregate scores do not override
+that rule. Synthetic mechanics were intentionally excluded from heldout. Their
+locked test-only result remains 50/50 with zero synthetic forbidden intrusion,
+deletion resurrection, or cross-tenant leakage.
 
 The locked candidate parameters remain candidate/relation/final/context limits
 64/24/10/1600. No recall source file or frozen data, case, label, window,
-privacy, split, or source artifact changed. A separate control-plane approval
-is still required before the documented one-time command may run.
+privacy, split, or source artifact changed. The canonical result SHA-256 is
+`5a9d726dd0ebbf5db5d04acf21dadcc8d56b9bae59ca17c17189450ccd62dcef`.
+The single run is consumed permanently: this heldout cannot be rerun, and its
+misses cannot be used to tune and retest a repair. Any future improvement needs
+a new benchmark version or newly frozen evaluation split.
