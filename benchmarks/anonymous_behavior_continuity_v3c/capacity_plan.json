@@ -1,6 +1,6 @@
 {
   "schema_version": "anonymous-behavior-capacity-plan-v3c",
-  "state": "M0_CONTRACT_FROZEN_M1_SNAPSHOTS_ABSENT",
+  "state": "M1_NO_GO_PREFLIGHT",
   "parent_v3b_closeout_commit": "0ee63e50e5896cfbdcc652a38854586db4fed607",
   "v3b_heldout_boundary": {
     "unique_run_consumed": true,
@@ -64,19 +64,25 @@
     "slots": 20
   },
   "capacity_status": {
-    "snapshot_presence_checked_at": "2026-08-12T13:05:35+08:00",
+    "snapshot_presence_checked_at": "2026-08-12T13:54:44+08:00",
     "snapshot_presence_search_scope": [
       "/Users/chenyunzhe/.Trash",
       "/Users/chenyunzhe/Downloads",
       "/Users/chenyunzhe/Documents/Codex_Project/LiveDay0"
     ],
-    "snapshots_present": false,
-    "source_rows_inspected": false,
-    "v3c_eligible_entities": null,
-    "v3c_case_eligible_entities": null,
-    "v3c_split_feasible": null,
+    "snapshots_present": true,
+    "all_snapshot_identities_pass": true,
+    "source_rows_inspected": true,
+    "v3c_projected_entities": 2070,
+    "v3c_case_eligible_entities": 1868,
+    "v3c_exact_k_eligible_entities": 74,
+    "v3c_privacy_capacity_entities": 34,
+    "v3c_privacy_capacity_observations": 680,
+    "v3c_privacy_capacity_sources": 1,
+    "v3c_split_feasible": false,
     "freeze_allowed": false,
-    "next_gate": "M1_EXACT_SNAPSHOT_PREFLIGHT"
+    "next_gate": "BLOCKED_CONTRACT_REVISION_REQUIRED",
+    "decision": "NO_GO_PREFLIGHT"
   },
   "synthetic_real_quota_contribution": 0
 }

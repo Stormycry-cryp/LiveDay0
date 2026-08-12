@@ -1,7 +1,6 @@
 # Anonymous behavior continuity Benchmark v3c contract
 
-**Contract state: `M0_CONTRACT_FROZEN`; M1 snapshot preflight is pending and
-data freeze is not yet allowed.** v3c is
+**Contract state: `M1_NO_GO_PREFLIGHT`; data freeze is not allowed.** v3c is
 an independent benchmark version created after v3b consumed its only heldout
 run and returned `NO-GO_HELDOUT_RECALL`. It does not modify, reopen, inspect at
 case level, tune against, or rerun v3b heldout. The v3b aggregate result may be
@@ -191,12 +190,27 @@ distributions, and Wilson plus entity/component-clustered uncertainty. Release r
 Recall@10 1.0, repeated and transition completeness 1.0, zero non-null failure
 counts, passing privacy/release audit, and no hidden contract relaxation.
 
+## M1 outcome
+
+The 2026-08-12 aggregate-only preflight verified all three official snapshot
+byte/SHA-256/ZIP identities, official DOI metadata, CC BY 4.0 page links, and
+source schemas. It then stopped at `NO_GO_PREFLIGHT`: after source-local v3b
+exact/one-slot-component exclusion, case eligibility, exact `k>=5`, and the
+maximum 50% selection rule, privacy capacity is 34 OULAD entities (680
+observations) and zero Retail/Electricity entities. The 90-entity, 1,800-
+observation, two-source, 30/30/30, and evaluation-component gates therefore
+fail. No frozen data, case, manifest, RED result, synthetic case, or v3c
+heldout was created. Continuing requires a prospective contract decision; the
+failed gates cannot be repaired by rerunning M1 or relaxing them after seeing
+these aggregates.
+
 ## Exact first milestone
 
 M0 completed when the v3c contract and capacity plan were committed, the project
 tracker points to them, local snapshot presence is recorded without source-row
 inspection, and a new preflight command/output schema is specified. At the time
-of this freeze the three exact raw archives are not present in the active project
-or Trash search scope, so M1 is pending an exact official re-download and hash
-verification. No RED, case generation, recall change, or heldout action belongs
-to M0.
+of M0 freeze the three exact raw archives were not present in the active project
+or Trash search scope. M1 subsequently obtained and verified them, wrote only
+the two allowed aggregate evidence files, and returned exit 2 with
+`freeze_allowed=false`. No RED, case generation, recall change, or heldout
+action occurred.
