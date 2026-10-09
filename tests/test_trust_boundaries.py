@@ -12,9 +12,9 @@ import pytest
 
 import liveday0.db as db
 from liveday0.core import MemoryService
-from liveday0.exceptions import NotFound, SnapshotInvalidated
+from liveday0.exceptions import NotFound, SnapshotInvalidated, VersionConflict
 from liveday0.types import RecallOptions
-from tests.helpers import evidence, event, flatten_context
+from tests.helpers import make_projection, evidence, event, flatten_context
 
 
 def seed(service, label="gate memory"):
@@ -177,7 +177,7 @@ def test_projection_support_and_delete_are_ordered(service, monkeypatch, delete_
     item = seed(service)
     control = ControlledTransactions(monkeypatch, "delete" if delete_first else "projection",
         "FOR UPDATE" if delete_first else "INSERT INTO projections", after=delete_first)
-    actions = {"delete": lambda: service.delete_evidence(item["evidence_id"]), "projection": lambda: service.materialize_projection(
+    actions = {"delete": lambda: service.delete_evidence(item["evidence_id"]), "projection": lambda: make_projection(service,
         projection_type="relationship", projection_key="gate projection", scope="gate",
         body={"summary": "gate memory private_projection_body"}, support_card_ids=item["card_ids"])}
     first, second = ("delete", "projection") if delete_first else ("projection", "delete")
@@ -191,7 +191,7 @@ def test_projection_support_and_delete_are_ordered(service, monkeypatch, delete_
             control.release.set()
         a.result(timeout=6)
         if delete_first:
-            with pytest.raises(ValueError):
+            with pytest.raises(VersionConflict):
                 b.result(timeout=6)
         else:
             b.result(timeout=6)
@@ -232,7 +232,7 @@ def test_missing_tenant_fails_and_bootstrap_is_idempotent():
 
 def test_unsafe_delta_invalidates_existing_snapshot_and_excludes_dependent_projection(service, monkeypatch):
     item = seed(service)
-    pid = service.materialize_projection(projection_type="relationship", projection_key="unsafe-view", scope="gate",
+    pid = make_projection(service, projection_type="relationship", projection_key="unsafe-view", scope="gate",
         body={"summary": "gate memory unsafe_old_projection"}, support_card_ids=item["card_ids"])
     snapshot = service.recall("gate memory")
     service.add_event_delta(item["card_ids"][0], evidence("restructure", key="unsafe-source"),
@@ -249,10 +249,12 @@ def test_unsafe_delta_invalidates_existing_snapshot_and_excludes_dependent_proje
 
 def test_deleted_projection_content_requires_version_bound_rebuild(service):
     a, b = seed(service, "deleted family"), seed(service, "remaining family")
-    pid = service.materialize_projection(projection_type="relationship", projection_key="partial-family", scope="private scope",
+    pid = make_projection(service, projection_type="relationship", projection_key="partial-family", scope="private scope",
         body={"summary": "private polluted summary"}, support_card_ids=[*a["card_ids"], *b["card_ids"]])
     service.delete_evidence(a["evidence_id"])
-    result = service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "private polluted summary"}})
+    with pytest.raises(ValueError, match="unbound"):
+        service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "private polluted summary"}})
+    result = service.maintenance.run_ready(limit=1)
     assert result[0]["state"] == "waiting"
     with db.tenant_transaction(service.tenant_id, mode="read") as conn:
         row = conn.execute("SELECT lifecycle,scope FROM projections WHERE id=%s", (pid,)).fetchone()
@@ -295,10 +297,10 @@ def test_unsafe_support_cannot_publish_projection_that_reappears_after_catchup(s
     projection_id = None
     rejected = False
     try:
-        projection_id = service.materialize_projection(projection_type="relationship", projection_key="unsafe-new-view",
+        projection_id = make_projection(service, projection_type="relationship", projection_key="unsafe-new-view",
             scope="gate", body={"summary": "unsafe projection gate stale_after_catchup"}, support_card_ids=[cid])
-    except ValueError as exc:
-        assert "unsafe" in str(exc)
+    except VersionConflict as exc:
+        assert "pending" in str(exc)
         rejected = True
     service.maintenance.make_pending_ready(job_type="event_rewrite")
     service.maintenance.run_ready(limit=1)

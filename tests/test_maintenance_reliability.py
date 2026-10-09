@@ -4,8 +4,9 @@ from uuid import UUID
 
 import pytest
 
+from liveday0.exceptions import VersionConflict
 from liveday0.db import tenant_transaction
-from tests.helpers import evidence, event, flatten_context
+from tests.helpers import publish_update, make_projection, evidence, event, flatten_context
 
 
 def new_event(service, label="work"):
@@ -40,7 +41,7 @@ def focus_event(service, card_id):
 
 
 def make_view(service, card_id, *, key="state", counter_id=None):
-    pid = service.materialize_projection(projection_type="current_state", projection_key=key,
+    pid = make_projection(service, projection_type="current_state", projection_key=key,
         scope="work", body={"summary": f"{key}-old-view"}, support_card_ids=[card_id])
     if counter_id:
         with tenant_transaction(service.tenant_id) as conn:
@@ -199,10 +200,19 @@ def test_unsafe_catchup_and_new_deltas_preserve_retry_backoff(service, monkeypat
     assert service.effective_event(card_id)["body"]["current_result"] == "second-change"
 
 
-def test_rewrite_invalidates_view_created_during_safe_pending(service):
+def test_rewrite_invalidates_legacy_view_created_during_safe_pending(service):
     card_id = new_event(service)
     append_delta(service, card_id)
-    pid = make_view(service, card_id)
+    # New creation now rejects pending input. Simulate an already persisted legacy
+    # view to retain the separate defense: catch-up must invalidate that old view.
+    with pytest.raises(VersionConflict, match="pending"):
+        make_view(service, card_id)
+    with tenant_transaction(service.tenant_id) as conn:
+        pid = conn.execute("""INSERT INTO projections(tenant_id,projection_key,projection_type,scope)
+            VALUES (%s,'legacy-pending','current_state','work') RETURNING id""",(service.tenant_id,)).fetchone()["id"]
+        conn.execute("""INSERT INTO projection_versions(tenant_id,projection_id,version,body,lifecycle,epistemic_state)
+            VALUES (%s,%s,1,'{"state":"state-old-view"}','active','confirmed')""",(service.tenant_id,pid))
+        conn.execute("INSERT INTO projection_supports VALUES (%s,%s,%s,'support')",(service.tenant_id,pid,card_id))
     focus_event(service, card_id)
     assert service.maintenance.run_ready(limit=1)[0]["state"] == "succeeded"
     assert view_state(service, pid)["lifecycle"] == "invalidated"
@@ -217,12 +227,14 @@ def test_safe_pending_blocks_legacy_replacement_until_catchup(service, role):
     append_delta(service, changed)
     with tenant_transaction(service.tenant_id) as conn:
         conn.execute("UPDATE maintenance_jobs SET available_at=now()+interval '1 day' WHERE target_id=%s", (changed,))
-    service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "stale replacement"}})
+    with pytest.raises(VersionConflict, match="pending"):
+        publish_update(service, pid, {"summary": "stale replacement"})
+    service.maintenance.run_ready(limit=1)
     assert view_state(service, pid)["lifecycle"] == "invalidated"
     assert read_job(service, pid, "projection_resynthesis")["state"] == "waiting"
     focus_event(service, changed)
     service.maintenance.run_ready(limit=1)
     service.maintenance.make_retries_ready()
-    result = service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "fresh replacement"}})
-    assert result[0]["state"] == "succeeded"
+    result = publish_update(service, pid, {"summary": "fresh replacement"})
+    assert result["lifecycle"] == "active"
     assert view_state(service, pid)["lifecycle"] == "active"

@@ -14,7 +14,7 @@ from liveday0.core import MemoryService
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import VersionConflict
 from liveday0.migrations import migrate_down, migrate_up, migration_status
-from tests.helpers import evidence
+from tests.helpers import evidence, publish_update
 from tests.test_maintenance_reliability import append_delta, focus_event, make_view, new_event, read_job, view_state
 from tests.test_projection_rebuild import setup_rebuild
 
@@ -54,7 +54,7 @@ def test_output_wait_survives_idle_polls_and_late_output_without_new_input(servi
     with pytest.raises(ValueError):
         service.maintenance.run_ready(projection_outputs={pid: ["invalid output"]})
     assert read_job(service, pid, "projection_resynthesis")["state"] == "waiting"
-    assert service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "later output"}})[0]["state"] == "succeeded"
+    assert publish_update(service, pid, {"summary": "later output"})["lifecycle"] == "active"
     final = read_job(service, pid, "projection_resynthesis")
     assert final["id"] == before["id"] and final["failure_count"] == 0
     assert final["wait_reason"] is None and final["wait_input_fingerprint"] is None
@@ -68,14 +68,15 @@ def test_dependency_catchup_wakes_same_job_without_another_observation(service):
     assert service.maintenance.run_ready(limit=1)[0]["state"] == "waiting"
     before = read_job(service, pid, "projection_resynthesis")
     assert before["wait_reason"] == "dependency_pending"
-    assert service.maintenance.run_ready(limit=5, projection_outputs={pid: {"summary": "too early"}}) == []
+    with pytest.raises(VersionConflict, match="pending"):
+        publish_update(service, pid, {"summary": "too early"})
     service.maintenance.make_pending_ready(job_type="event_rewrite")
     result = service.maintenance.run_ready(limit=2)
     assert [row["state"] for row in result] == ["succeeded", "waiting"]
     after = read_job(service, pid, "projection_resynthesis")
     assert after["id"] == before["id"] and after["wait_reason"] == "semantic_output_required"
     assert after["failure_count"] == 0 and after["wait_input_fingerprint"] != before["wait_input_fingerprint"]
-    assert service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "caught up"}})[0]["state"] == "succeeded"
+    assert publish_update(service, pid, {"summary": "caught up"})["lifecycle"] == "active"
 
 
 def test_version_bound_wait_survives_and_late_bound_commit_completes_it(service):
@@ -84,7 +85,8 @@ def test_version_bound_wait_survives_and_late_bound_commit_completes_it(service)
     before = read_job(service, pid, "projection_resynthesis")
     assert before["wait_reason"] == "version_bound_rebuild_required"
     for _ in range(4):
-        assert service.maintenance.run_ready(limit=20, projection_outputs={pid: {"summary": "unbound"}}) == []
+        with pytest.raises(ValueError, match="unbound"):
+            service.maintenance.run_ready(limit=20, projection_outputs={pid: {"summary": "unbound"}})
     assert read_job(service, pid, "projection_resynthesis")["attempts"] == before["attempts"]
     prepared = service.maintenance.read_projection_rebuild(pid)
     service.maintenance.commit_projection_rebuild(prepared, replacement_body={"summary": "remaining"}, replacement_scope="remaining")
@@ -112,15 +114,18 @@ def test_notifications_and_waits_never_reset_real_failure_budget(service, monkey
     worker.make_pending_ready(job_type="event_rewrite"); worker.run_ready(limit=5)
     assert read_job(service, pid, "projection_resynthesis")["failure_count"] == 1
     monkeypatch.setattr(worker, "_resynthesize_projection", lambda conn, *args: conn.execute("SELECT 1/0"))
-    assert worker.run_ready(limit=1, projection_outputs={pid: {"summary": "output"}})[0]["state"] == "retry"
+    assert worker.resume_waiting(before["id"])
+    assert worker.run_ready(limit=1)[0]["state"] == "retry"
     worker.make_retries_ready()
-    assert worker.run_ready(limit=1, projection_outputs={pid: {"summary": "output"}})[0]["state"] == "dead"
+    assert worker.run_ready(limit=1)[0]["state"] == "dead"
     dead = read_job(service, pid, "projection_resynthesis")
     assert dead["failure_count"] == 3
     notify(service, cid)
     append_delta(service, cid, label="change after dead")
     worker.make_pending_ready(job_type="event_rewrite"); worker.run_ready(limit=5)
-    assert worker.run_ready(limit=10, projection_outputs={pid: {"summary": "another output"}}) == []
+    with pytest.raises(ValueError, match="unbound"):
+        worker.run_ready(limit=10, projection_outputs={pid: {"summary": "another output"}})
+    assert worker.run_ready(limit=10) == []
     assert not worker.resume_waiting(dead["id"])
     assert read_job(service, pid, "projection_resynthesis")["id"] == dead["id"]
     with tenant_transaction(service.tenant_id, mode="read") as conn:
@@ -189,8 +194,11 @@ s=MemoryService(UUID(sys.argv[1]));mode=sys.argv[2]
 if mode=='fail':
     s.maintenance.make_retries_ready()
     s.maintenance._rewrite_event=lambda conn,job: conn.execute('SELECT 1/0')
-outputs={UUID(sys.argv[3]):{'summary':'late process output'}} if mode=='output' else {}
-print(json.dumps({'pid':os.getpid(),'result':s.maintenance.run_ready(limit=1,projection_outputs=outputs)},default=str))
+if mode=='output':
+    prepared=s.maintenance.read_projection_update(UUID(sys.argv[3]))
+    result=[s.maintenance.commit_projection(prepared,replacement_body={'summary':'late process output'})]
+else: result=s.maintenance.run_ready(limit=1)
+print(json.dumps({'pid':os.getpid(),'result':result},default=str))
 '''
     result = subprocess.run([sys.executable,"-c",code,str(service.tenant_id),mode,str(pid or "")],
                             env=dict(os.environ),text=True,capture_output=True,timeout=15)
@@ -205,7 +213,7 @@ def test_normal_process_restarts_continue_waiting_and_real_failure_budget(servic
     before = read_job(service, pid, "projection_resynthesis")
     b = child(service, "poll"); assert b["result"] == []
     assert read_job(service, pid, "projection_resynthesis")["attempts"] == before["attempts"]
-    c = child(service, "output", pid); assert c["result"][0]["state"] == "succeeded"
+    c = child(service, "output", pid); assert c["result"][0]["lifecycle"] == "active"
     record("process-wait-output", {"processes": [a,b,c], "waiting_attempts": before["attempts"],
         "final_job": read_job(service,pid,"projection_resynthesis")})
     cid = new_event(service,"process failures"); append_delta(service,cid); focus_event(service,cid)
@@ -238,7 +246,7 @@ def test_upgrade_preserves_old_history_and_parks_recognized_wait(service):
         assert row["attempts"] == 7 and row["failure_count"] == 0
         assert row["last_error"] == "bounded semantic replacement required"
         assert service.maintenance.run_ready(limit=10) == []
-        assert service.maintenance.run_ready(limit=1,projection_outputs={pid:{"summary":"late"}})[0]["state"] == "succeeded"
+        assert publish_update(service,pid,{"summary":"late"})["lifecycle"] == "active"
     finally:
         migrate_up()
 

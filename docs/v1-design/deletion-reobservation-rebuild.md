@@ -2,6 +2,8 @@
 
 These internal contracts extend the [first trust-boundary milestone](trust-boundaries.md). They add no model service, generic CRUD surface, or new storage service. They do not establish production readiness or prove a model's semantic correctness.
 
+Later extensions: [frozen writes](frozen-writes.md) now governs general observe conflicts and composite atomicity; [projection input binding](projection-input-binding.md) extends the shared read/commit machinery to creation and ordinary updates. Its v2 input also binds the current sanitized target key/scope and preserves the erasure marker. Old prepared objects must be read again.
+
 ## Stable source identity
 
 `observe` checks the tenant's deleted source identities under its write gate before inserting evidence. A match raises `DeletedSource`, a `VersionConflict` subclass, without creating evidence, traces, cards, or a tenant revision.

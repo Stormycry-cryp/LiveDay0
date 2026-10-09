@@ -7,7 +7,7 @@ import pytest
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import SnapshotInvalidated
 from liveday0.types import RecallOptions
-from tests.helpers import evidence, event, fact, flatten_context, future
+from tests.helpers import make_projection, evidence, event, fact, flatten_context, future
 
 
 def test_s1_dinner_traces_gain_later_meaning(service):
@@ -70,7 +70,7 @@ def test_s1_dinner_traces_gain_later_meaning(service):
             family="evidence_support",
             relation_type="supports_later_event",
         )
-    service.materialize_projection(
+    make_projection(service,
         projection_type="life_thread",
         projection_key="thread:social-meals",
         scope="social meals after moving out",
@@ -229,7 +229,7 @@ def test_s5_correction_excludes_wrong_event_state_and_snapshot(service):
         ],
     )
     event_id = wrong["card_ids"][0]
-    projection_id = service.materialize_projection(
+    projection_id = make_projection(service,
         projection_type="current_state",
         projection_key="state:left-job",
         scope="employment",
@@ -353,7 +353,7 @@ def test_s7_recall_and_background_failure_prefer_missing_history(service):
             )
         ],
     )["card_ids"][0]
-    service.materialize_projection(
+    make_projection(service,
         projection_type="life_thread",
         projection_key="thread:polluted",
         scope="known-wrong history",

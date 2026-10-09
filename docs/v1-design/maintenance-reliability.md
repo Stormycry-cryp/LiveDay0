@@ -26,7 +26,7 @@ waiting 不在 worker 的到期查询中，反复轮询、`make_pending_ready` �
 
 直接依赖的增量、纠正或 canonical 追赶触发局部通知。只有指纹改变才将同一个 waiting job 唤醒为 pending；重复通知不会唤醒、清空计数或缩短已有 retry 的 backoff。成功重写再次局部失效，以覆盖在等待期间出现的投影。普通安全变化保持已固定 recall cycle，新 cycle 排除 invalidated 视图；删除、纠正、unsafe 沿用硬失效合同。
 
-普通输出通过已有 `run_ready(projection_outputs=...)` 到达：先验证 UUID→完整对象的结构，仅在投影仍可处理、没有 usable pending 依赖且没有来源删除标记时，唤醒相应普通等待任务。实际语义内容仍由可信内部调用者负责，本批没有为旧输出补造读集合证明。输出不被持久排队，调用者仍需保留待提交输出并检查执行结果。
+普通输出现在通过 [完整投影输入绑定](projection-input-binding.md) 的 read_projection_update / commit_projection 到达。非空 run_ready(projection_outputs=...) 已退役并在领取任务前拒绝，不能将旧正文补盖新版本。worker 缺输出时持久等待，合法绑定提交将原任务原子完成，保留 attempts/failure_count；不存在先唤醒后再提交输出的窗口。实际语义内容仍由可信内部调用者负责。
 
 删除后的输出必须通过 `read_projection_rebuild` / `commit_projection_rebuild`；合法绑定提交会将相关 waiting job 一并完成，旧裸输出不能唤醒它。该直接提交 API 保持自身原子事务和异常返回合同；本次 worker 的 failure_count 不扩展成所有内部 API 的统一调用计数。
 
@@ -44,4 +44,4 @@ waiting 不在 worker 的到期查询中，反复轮询、`make_pending_ready` �
 
 真实 PostgreSQL 反例覆盖：除零/CHECK 后目标回滚且错误持久；三次真实异常终止；无新输入时等待后补输出/追赶/绑定重建；重复通知与跨等待保存失败预算；错误终态不被增量、删除清理或输出绕过；正常进程退出后另一个进程接续；迁移保留历史并拒绝丢弃等待/预算。保留先前删除、重存、重建、租户锁序与 acceptance 回归，旧状态断言按等待合同机械更新。
 
-这些是隔离合成测试，不是生产容量、崩溃恢复指标或真实模型质量验收。CLI `run-jobs` 能输出等待/终态及原因，数据库可查询状态；尚无独立任务查询页面、告警或通用运维平台。候选发现语义仍未实现。普通 observe 冲突、复合写原子性、来源提取及普通投影完整版本绑定仍是后续独立批次。
+这些是隔离合成测试，不是生产容量、崩溃恢复指标或真实模型质量验收。CLI `run-jobs` 能输出等待/终态及原因，数据库可查询状态；尚无独立任务查询页面、告警或通用运维平台。候选发现语义仍未实现。普通 observe/复合写合同见 [冻结写入](frozen-writes.md)，新建和普通投影版本绑定见 [投影输入绑定](projection-input-binding.md)。来源提取、生产与模型质量仍是独立范围。

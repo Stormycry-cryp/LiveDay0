@@ -40,3 +40,14 @@ def flatten_context(context: dict) -> str:
     import json
 
     return json.dumps(context, ensure_ascii=False)
+
+
+def make_projection(service, *, body, **metadata):
+    """Static test output paired with an explicit input read and bound commit."""
+    prepared = service.maintenance.read_projection_creation(**metadata)
+    return service.materialize_projection(prepared=prepared, body=body)
+
+
+def publish_update(service, projection_id, body):
+    prepared = service.maintenance.read_projection_update(projection_id)
+    return service.maintenance.commit_projection(prepared, replacement_body=body)

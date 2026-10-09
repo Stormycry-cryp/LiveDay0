@@ -78,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     jobs.add_argument("--fail-job-type", action="append", default=[])
     jobs.add_argument(
         "--projection-outputs",
-        help="JSON or @path mapping projection UUIDs to bounded replacement bodies",
+        help="retired: non-empty outputs are rejected; use internal read/synthesize/commit_projection",
     )
     return parser
 

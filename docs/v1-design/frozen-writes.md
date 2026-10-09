@@ -35,4 +35,4 @@ delta 摘要域为 `liveday0:event-delta:v1`，包含 tenant_id、event_id、evi
 
 合成验证覆盖逐字段冲突、UTC 等价、深拷贝、并发同 key、旧摘要缺失、SQL 中途失败、四类复合命令、删除前后锁序、delta 重放及无副作用。数据库事务保证原子提交；本批没有做进程强杀或提交确认丢失的故障演练。
 
-普通投影的完整实际读集合绑定是下一窄批，旧裸 projection_outputs 仍依赖可信调用者；本批没有将其升级为版本绑定。来源提取/provider/真实模型质量、旧 heldout/v3c、生产迁移、普通维护 dead 的恢复政策与长期运维仍是独立范围。
+普通投影完整实际读集合绑定现见 [投影输入绑定](projection-input-binding.md)，旧裸 projection_outputs 已退役。来源提取/provider/真实模型质量、旧 heldout/v3c、生产迁移、普通维护 dead 的恢复政策与长期运维仍是独立范围。

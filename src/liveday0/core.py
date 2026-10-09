@@ -15,7 +15,7 @@ from liveday0.exceptions import DeletedSource, IdempotencyConflict, NotFound, Ve
 from liveday0.maintenance import MaintenanceEngine
 from liveday0.recall import RecallCompiler
 from liveday0.serialization import canonical_json, fingerprint, source_identity_digest
-from liveday0.types import EvidenceInput, RecallOptions, SemanticInput
+from liveday0.types import EvidenceInput, ProjectionRebuildInput, RecallOptions, SemanticInput
 
 
 CARD_REQUIRED_FIELDS: dict[str, set[str]] = {
@@ -571,71 +571,12 @@ class MemoryService:
             self._bump_revision(conn)
 
     def materialize_projection(
-        self,
-        *,
-        projection_type: str,
-        projection_key: str,
-        scope: str,
-        body: dict[str, Any],
-        support_card_ids: list[UUID],
-        epistemic_state: str = "confirmed",
+        self, *, body: dict[str, Any], prepared: ProjectionRebuildInput | None = None, **legacy,
     ) -> UUID:
-        if not support_card_ids:
-            raise ValueError("derived projections require canonical support")
-        with tenant_transaction(self.tenant_id) as conn:
-            for card_id in sorted(set(support_card_ids)):
-                card = self._get_card(conn, card_id)
-                if card["lifecycle"] not in {"active", "provisional"}:
-                    raise ValueError("projection support must be currently valid")
-            unsafe = conn.execute(
-                """
-                SELECT EXISTS (
-                  SELECT 1 FROM event_deltas
-                  WHERE tenant_id=%s AND event_id=ANY(%s) AND state='pending'
-                    AND delta @> '{"requires_restructure": true}'::jsonb
-                ) AS unsafe
-                """,
-                (self.tenant_id, sorted(set(support_card_ids))),
-            ).fetchone()["unsafe"]
-            if unsafe:
-                raise ValueError("unsafe projection support requires canonical catch-up")
-            projection_id = conn.execute(
-                """
-                INSERT INTO projections(
-                  tenant_id, projection_key, projection_type, scope, epistemic_state
-                ) VALUES (%s,%s,%s,%s,%s) RETURNING id
-                """,
-                (self.tenant_id, projection_key, projection_type, scope, epistemic_state),
-            ).fetchone()["id"]
-            conn.execute(
-                """
-                INSERT INTO projection_versions(
-                  tenant_id, projection_id, version, body, lifecycle, epistemic_state
-                ) VALUES (%s,%s,1,%s,'active',%s)
-                """,
-                (self.tenant_id, projection_id, Jsonb(body), epistemic_state),
-            )
-            for card_id in support_card_ids:
-                conn.execute(
-                    """
-                    INSERT INTO projection_supports(
-                      tenant_id, projection_id, card_id, support_role
-                    ) VALUES (%s,%s,%s,'support')
-                    """,
-                    (self.tenant_id, projection_id, card_id),
-                )
-                conn.execute(
-                    """
-                    INSERT INTO relations(
-                      tenant_id, from_kind, from_id, to_kind, to_id, family,
-                      relation_type, lifecycle
-                    ) VALUES (%s,'semantic_card',%s,'projection',%s,'event_thread','supports_view','active')
-                    ON CONFLICT DO NOTHING
-                    """,
-                    (self.tenant_id, card_id, projection_id),
-                )
-            self._bump_revision(conn)
-            return projection_id
+        """Create only from an earlier explicit read; never auto-bind an old body."""
+        if legacy or not isinstance(prepared, ProjectionRebuildInput) or prepared.payload.get("mode") != "create":
+            raise VersionConflict("read_projection_creation is required before materialize_projection")
+        return self.maintenance.commit_projection(prepared, replacement_body=body)["projection_id"]
 
     def add_relation(
         self,

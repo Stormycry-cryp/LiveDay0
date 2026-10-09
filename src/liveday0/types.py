@@ -56,7 +56,7 @@ class RecallOptions:
 
 @dataclass(frozen=True)
 class ProjectionRebuildInput:
-    """Immutable read set for a trusted internal rebuild, not an authorization ticket."""
+    """Immutable creation/update/rebuild read set; its legacy name is retained."""
 
     tenant_id: UUID
     projection_id: UUID

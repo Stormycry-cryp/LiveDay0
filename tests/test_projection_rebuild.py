@@ -10,7 +10,7 @@ import pytest
 from liveday0.core import MemoryService
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import NotFound, VersionConflict
-from tests.helpers import evidence, event, flatten_context
+from tests.helpers import make_projection, evidence, event, flatten_context
 from tests.test_trust_boundaries import ControlledTransactions, named
 
 
@@ -21,7 +21,7 @@ def card(service, label):
 
 def setup_rebuild(service):
     a, b, c = [card(service, name) for name in ["erased-A-private", "surviving-B", "counter-C"]]
-    pid = service.materialize_projection(projection_type="relationship", projection_key="erased-original-key",
+    pid = make_projection(service, projection_type="relationship", projection_key="erased-original-key",
         scope="erased-original-scope", body={"summary": "erased-original-body"},
         support_card_ids=[a["card_ids"][0], b["card_ids"][0]])
     with tenant_transaction(service.tenant_id) as conn:
@@ -89,7 +89,9 @@ def test_version_bound_rebuild_restores_same_id_from_remaining_support_and_keeps
         # Even after a successful rebuild this lineage cannot use a naked replacement.
         service._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection", target_id=pid,
             coalesce_key=f"projection_resynthesis:{pid}", baseline_version=3, available_after_seconds=0)
-    retry = service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "unbound old output"}})
+    with pytest.raises(ValueError, match="unbound"):
+        service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "unbound old output"}})
+    retry = service.maintenance.run_ready(limit=1)
     assert retry[0]["state"] == "waiting"
     assert "unbound old output" not in flatten_context(service.recall("surviving-B"))
 
@@ -136,7 +138,7 @@ def test_read_then_dependency_or_target_change_rejects_stale_output(service, cha
 
 def test_rebuild_requires_erased_target_and_positive_support_and_own_tenant(service):
     item = card(service, "only-support")
-    pid = service.materialize_projection(projection_type="relationship", projection_key="only-view", scope="one",
+    pid = make_projection(service, projection_type="relationship", projection_key="only-view", scope="one",
         body={"summary": "old"}, support_card_ids=item["card_ids"])
     with pytest.raises(VersionConflict): service.maintenance.read_projection_rebuild(pid)
     service.delete_evidence(item["evidence_id"])

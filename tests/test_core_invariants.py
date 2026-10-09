@@ -10,7 +10,7 @@ from liveday0.db import connect, tenant_transaction
 from liveday0.exceptions import NotFound, SnapshotInvalidated, VersionConflict
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from liveday0.types import RecallOptions
-from tests.helpers import evidence, event, fact, flatten_context
+from tests.helpers import publish_update, make_projection, evidence, event, fact, flatten_context
 
 
 def test_observe_is_idempotent_and_does_not_duplicate_semantics(service):
@@ -105,7 +105,7 @@ def test_polluted_projection_needs_validated_bounded_replacement(service):
             )
         ],
     )["card_ids"][0]
-    projection_id = service.materialize_projection(
+    projection_id = make_projection(service,
         projection_type="current_state",
         projection_key="state:projection-correction",
         scope="employment",
@@ -122,11 +122,8 @@ def test_polluted_projection_needs_validated_bounded_replacement(service):
     assert retry[0]["state"] == "waiting"
     assert not service.recall("工作状态 辞职")["layers"]["current_state"]
     service.maintenance.make_retries_ready()
-    success = service.maintenance.run_ready(
-        limit=1,
-        projection_outputs={projection_id: {"state": "仍在职；没有辞职"}},
-    )
-    assert success[0]["state"] == "succeeded"
+    success = publish_update(service, projection_id, {"state": "仍在职；没有辞职"})
+    assert success["lifecycle"] == "active"
     context = service.recall("工作状态 辞职")
     assert context["layers"]["current_state"][0]["body"]["state"] == "仍在职；没有辞职"
 
@@ -270,7 +267,7 @@ def test_explicit_deletion_removes_content_from_sources_derivatives_and_cache(se
         ],
     )
     card_id = observed["card_ids"][0]
-    service.materialize_projection(
+    make_projection(service,
         projection_type="current_state",
         projection_key="state:delete-me",
         scope="deletion test",
