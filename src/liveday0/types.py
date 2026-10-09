@@ -71,3 +71,42 @@ class ProjectionRebuildInput:
     def payload(self) -> dict[str, Any]:
         # Each access returns a detached value; nested edits cannot alter the read set.
         return json.loads(self.canonical_input)
+
+
+@dataclass(frozen=True)
+class EvidenceInterpretationInput:
+    """Actual source read for trusted internal synthesis, not an authorization token."""
+
+    tenant_id: UUID
+    evidence_id: UUID
+    canonical_input: str = field(repr=False)
+
+    @property
+    def payload(self) -> dict[str, Any]:
+        return json.loads(self.canonical_input)
+
+    @property
+    def fingerprint(self) -> str:
+        return fingerprint(self.canonical_input)
+
+
+@dataclass(frozen=True)
+class ExplicitSaveAuthorization:
+    """Read-only host check. The host must verify a real human action, never a model flag.
+
+    No real host authentication adapter ships here. A callback must not consume
+    authorization: only the final database transaction consumes the intent.
+    """
+
+    tenant_id: UUID
+    intent_id: UUID
+    phase: Literal["read", "commit"]
+    canonical_request: str = field(repr=False)
+
+    @property
+    def payload(self) -> dict[str, Any]:
+        return json.loads(self.canonical_request)
+
+    @property
+    def fingerprint(self) -> str:
+        return fingerprint(self.canonical_request)

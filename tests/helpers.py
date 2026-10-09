@@ -51,3 +51,18 @@ def make_projection(service, *, body, **metadata):
 def publish_update(service, projection_id, body):
     prepared = service.maintenance.read_projection_update(projection_id)
     return service.maintenance.commit_projection(prepared, replacement_body=body)
+
+
+def clear_interpretation_contracts_for_legacy_fixture():
+    """Only for synthetic migration fixtures testing pre-005 schema guards.
+
+    Deliberately discard the new contract before exercising an older migration;
+    this is not an application or production downgrade escape hatch.
+    """
+    from liveday0.db import connect
+    with connect() as conn:
+        conn.execute("DELETE FROM interpretation_intents")
+        conn.execute("DELETE FROM observation_receipts")
+        conn.execute("DELETE FROM source_interpretation_revocations")
+        conn.execute("UPDATE evidence SET interpretation_revoked=false,interpretation_epoch=0")
+        conn.execute("DELETE FROM reobservation_intents WHERE state='revoked'")

@@ -21,7 +21,7 @@ def test_observe_is_idempotent_and_does_not_duplicate_semantics(service):
     assert first["created"] is True
     assert second["created"] is False
     assert second["evidence_id"] == first["evidence_id"]
-    assert second["card_ids"] == []
+    assert second["card_ids"] == first["card_ids"]
     with tenant_transaction(service.tenant_id) as conn:
         assert conn.execute("SELECT count(*) AS n FROM evidence").fetchone()["n"] == 1
         assert conn.execute("SELECT count(*) AS n FROM semantic_cards").fetchone()["n"] == 1
@@ -317,9 +317,9 @@ def test_only_postgresql_and_relational_adjacency_are_used():
 
 
 def test_migration_up_down_up_is_repeatable():
-    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4]
-    assert migrate_down(4) == [4, 3, 2, 1]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4, 5]
+    assert migrate_down(5) == [5, 4, 3, 2, 1]
     with connect() as conn:
         assert conn.execute("SELECT to_regclass('public.semantic_cards') AS name").fetchone()["name"] is None
-    assert migrate_up() == [1, 2, 3, 4]
-    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4]
+    assert migrate_up() == [1, 2, 3, 4, 5]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4, 5]

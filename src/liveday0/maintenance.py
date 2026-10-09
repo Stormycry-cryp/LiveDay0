@@ -8,7 +8,7 @@ from psycopg import Error as DatabaseError
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import NotFound, VersionConflict
+from liveday0.exceptions import InterpretationRevoked, NotFound, VersionConflict
 from liveday0.serialization import canonical_json, fingerprint
 from liveday0.types import ProjectionRebuildInput
 
@@ -214,12 +214,14 @@ class MaintenanceEngine:
 
     def enqueue_candidate_discovery(self, evidence_id: UUID) -> UUID:
         with tenant_transaction(self.tenant_id) as conn:
-            source = conn.execute("SELECT status FROM evidence WHERE tenant_id=%s AND id=%s",
+            source = conn.execute("SELECT status,interpretation_revoked FROM evidence WHERE tenant_id=%s AND id=%s",
                                   (self.tenant_id, evidence_id)).fetchone()
             if not source:
                 raise NotFound("evidence not found in tenant")
             if source["status"] == "deleted":
                 raise ValueError("cannot schedule deleted evidence")
+            if source["interpretation_revoked"]:
+                raise InterpretationRevoked("cannot schedule automatic interpretation of a revoked source")
             return self._enqueue_job_conn(conn, job_type="candidate_discovery", target_kind="evidence",
                 target_id=evidence_id, coalesce_key=f"candidate_discovery:{evidence_id}",
                 baseline_version=None, available_after_seconds=0)

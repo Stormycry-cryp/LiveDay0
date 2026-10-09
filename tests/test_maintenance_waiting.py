@@ -13,6 +13,7 @@ import pytest
 from liveday0.core import MemoryService
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import VersionConflict
+from tests.helpers import clear_interpretation_contracts_for_legacy_fixture
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from tests.helpers import evidence, publish_update
 from tests.test_maintenance_reliability import append_delta, focus_event, make_view, new_event, read_job, view_state
@@ -233,14 +234,15 @@ def test_upgrade_preserves_old_history_and_parks_recognized_wait(service):
     with tenant_transaction(service.tenant_id) as conn:
         conn.execute("UPDATE evidence SET request_fingerprint=NULL")
         conn.execute("UPDATE event_deltas SET request_fingerprint=NULL")
-    assert migrate_down(2) == [4, 3]
+    clear_interpretation_contracts_for_legacy_fixture()
+    assert migrate_down(3) == [5, 4, 3]
     try:
         with tenant_transaction(service.tenant_id) as conn:
             conn.execute("UPDATE projections SET lifecycle='invalidated' WHERE id=%s",(pid,))
             conn.execute("""INSERT INTO maintenance_jobs(tenant_id,job_type,target_kind,target_id,coalesce_key,
               state,attempts,last_error) VALUES (%s,'projection_resynthesis','projection',%s,%s,'retry',7,
               'bounded semantic replacement required')""",(service.tenant_id,pid,f"projection_resynthesis:{pid}"))
-        assert migrate_up() == [3,4]
+        assert migrate_up() == [3,4,5]
         row = read_job(service,pid,"projection_resynthesis")
         assert row["state"] == "waiting" and row["wait_reason"] == "semantic_output_required"
         assert row["attempts"] == 7 and row["failure_count"] == 0
@@ -261,10 +263,11 @@ def test_down_migration_refuses_to_discard_wait_or_budget(service,kind):
     with tenant_transaction(service.tenant_id) as conn:
         conn.execute("UPDATE evidence SET request_fingerprint=NULL")
         conn.execute("UPDATE event_deltas SET request_fingerprint=NULL")
+    clear_interpretation_contracts_for_legacy_fixture()
     try:
         with pytest.raises(psycopg.errors.RaiseException,match="explicit reconciliation"):
-            migrate_down(2)
-        assert [r["version"] for r in migration_status()] == [1,2,3,4]
+            migrate_down(3)
+        assert [r["version"] for r in migration_status()] == [1,2,3,4,5]
         assert read_job(service,pid,"projection_resynthesis") == before
     finally:
         migrate_up()

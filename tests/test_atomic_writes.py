@@ -10,7 +10,8 @@ import pytest
 
 from liveday0.core import MemoryService
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import DeletedSource, NotFound, VersionConflict
+from liveday0.exceptions import DeletedSource, InterpretationRevoked, NotFound, VersionConflict
+from tests.helpers import clear_interpretation_contracts_for_legacy_fixture
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from liveday0.types import EvidenceInput, SemanticInput
 from tests.test_trust_boundaries import ControlledTransactions, named
@@ -37,7 +38,8 @@ def snapshot(service):
     tables = ["tenants", "evidence", "life_traces", "semantic_cards", "semantic_card_versions",
               "card_sources", "event_deltas", "mentions", "mention_candidates", "relations",
               "projections", "projection_versions", "projection_supports", "maintenance_jobs",
-              "recall_snapshots", "deletion_markers", "reobservation_intents"]
+              "recall_snapshots", "deletion_markers", "reobservation_intents", "observation_receipts",
+              "interpretation_intents", "source_interpretation_revocations"]
     with tenant_transaction(service.tenant_id, mode="read") as conn:
         return {table: sorted(json.dumps(dict(r), sort_keys=True, default=str)
                               for r in conn.execute("SELECT * FROM " + table)) for table in tables}
@@ -119,12 +121,12 @@ def test_key_scope_anonymous_and_deleted_precedence(service):
 @pytest.mark.parametrize("kind", ["source", "delta"])
 def test_legacy_keys_conflict_and_migration_does_not_backfill(service, kind):
     # Prepare rows on old schema through SQL, without fabricating a frozen request.
-    assert migrate_down(1) == [4]
+    assert migrate_down(2) == [5, 4]
     try:
         with tenant_transaction(service.tenant_id) as conn:
             eid = conn.execute("""INSERT INTO evidence(tenant_id,modality,source_kind,content,occurred_at,idempotency_key)
                 VALUES (%s,'text','synthetic','synthetic source',%s,'source') RETURNING id""", (service.tenant_id,STAMP)).fetchone()["id"]
-        assert migrate_up() == [4]
+        assert migrate_up() == [4, 5]
         if kind == "source":
             before = snapshot(service); conflict(lambda: service.observe(source()), "legacy source")
         else:
@@ -294,7 +296,7 @@ def test_deleting_card_erases_observation_and_delta_content_fingerprints(service
     with tenant_transaction(service.tenant_id,mode="read") as conn:
         assert not conn.execute("SELECT 1 FROM evidence WHERE request_fingerprint IS NOT NULL").fetchone()
         assert not conn.execute("SELECT 1 FROM event_deltas WHERE request_fingerprint IS NOT NULL").fetchone()
-    conflict(lambda: service.observe(req),"legacy source")
+    with pytest.raises(InterpretationRevoked): service.observe(req)
 
 
 @pytest.mark.parametrize("table", ["evidence","event_deltas"])
@@ -302,9 +304,10 @@ def test_downgrade_refuses_to_discard_frozen_requests(service,table):
     cid = seed(service); service.add_event_delta(cid,source(),{"current_result":"delta"},idempotency_key="delta")
     if table == "event_deltas":
         with tenant_transaction(service.tenant_id) as conn: conn.execute("UPDATE evidence SET request_fingerprint=NULL")
+    clear_interpretation_contracts_for_legacy_fixture()
     before = snapshot(service)
-    with pytest.raises(psycopg.errors.RaiseException,match="frozen request fingerprints"): migrate_down(1)
-    assert [r["version"] for r in migration_status()] == [1,2,3,4]
+    with pytest.raises(psycopg.errors.RaiseException,match="frozen request fingerprints"): migrate_down(2)
+    assert [r["version"] for r in migration_status()] == [1,2,3,4,5]
     assert snapshot(service) == before
 
 

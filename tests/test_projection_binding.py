@@ -305,7 +305,7 @@ def test_target_disappears_or_is_erased_after_update_read_without_source_change(
             conn.execute("""INSERT INTO deletion_markers(tenant_id,object_kind,object_id,reason_code)
                 VALUES (%s,'projection_content',%s,'synthetic_target_boundary')""", (service.tenant_id, pid))
     before = snapshot(service)
-    assert len(before) == 17
+    assert len(before) == 20
     for table in ["evidence", "card_sources", "semantic_cards", "semantic_card_versions", "event_deltas"]:
         assert before[table] == initial[table]
     if change == "erasure-marker":

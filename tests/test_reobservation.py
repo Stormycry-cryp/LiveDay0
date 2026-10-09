@@ -12,6 +12,7 @@ import pytest
 from liveday0.core import MemoryService
 from liveday0.db import connect, tenant_transaction
 from liveday0.exceptions import DeletedSource, NotFound, VersionConflict
+from tests.helpers import clear_interpretation_contracts_for_legacy_fixture
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from tests.helpers import evidence, fact
 from tests.test_trust_boundaries import ControlledTransactions, named
@@ -209,14 +210,15 @@ def test_incremental_migration_down_preserves_001_data_and_up_cannot_recover_era
     with connect() as conn:
         conn.execute("UPDATE evidence SET request_fingerprint=NULL")
         conn.execute("UPDATE event_deltas SET request_fingerprint=NULL")
-    assert migrate_down(3) == [4, 3, 2]
+    clear_interpretation_contracts_for_legacy_fixture()
+    assert migrate_down(4) == [5, 4, 3, 2]
     try:
         assert [row["version"] for row in migration_status()] == [1]
         with connect() as conn:
             assert conn.execute("SELECT to_regclass('reobservation_intents') AS t").fetchone()["t"] is None
             assert conn.execute("SELECT count(*) AS n FROM evidence").fetchone()["n"] == 2
     finally:
-        assert migrate_up() == [2, 3, 4]
+        assert migrate_up() == [2, 3, 4, 5]
     with tenant_transaction(service.tenant_id, mode="read") as conn:
         marker = conn.execute("SELECT source_identity_digest FROM deletion_markers WHERE object_kind='evidence'").fetchone()
         assert marker["source_identity_digest"] is None  # No deleted key/body is recovered to invent a backfill.

@@ -11,7 +11,8 @@ from psycopg.types.json import Jsonb
 
 from liveday0.config import event_delta_soft_limit, event_quiet_seconds
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import DeletedSource, IdempotencyConflict, NotFound, VersionConflict
+from liveday0.exceptions import DeletedSource, IdempotencyConflict, InterpretationRevoked, NotFound, VersionConflict
+from liveday0.interpretation import InterpretationEngine, observation_receipt, revoke_source, sources_for_card
 from liveday0.maintenance import MaintenanceEngine
 from liveday0.recall import RecallCompiler
 from liveday0.serialization import canonical_json, fingerprint, source_identity_digest
@@ -28,10 +29,11 @@ CARD_REQUIRED_FIELDS: dict[str, set[str]] = {
 class MemoryService:
     """Tenant-scoped application service; canonical objects have no generic CRUD API."""
 
-    def __init__(self, tenant_id: UUID):
+    def __init__(self, tenant_id: UUID, *, explicit_save_authorizer=None):
         self.tenant_id = tenant_id
         self.maintenance = MaintenanceEngine(tenant_id)
         self.recall_compiler = RecallCompiler(tenant_id)
+        self.interpretations = InterpretationEngine(self, explicit_save_authorizer)
 
     def ensure_tenant(self) -> UUID:
         with tenant_transaction(self.tenant_id, mode="bootstrap") as conn:
@@ -62,22 +64,42 @@ class MemoryService:
             raise ValueError("evidence needs immutable content or a traceable object_ref")
         if evidence.embedding is not None and len(evidence.embedding) != 8:
             raise ValueError("v1 pgvector embeddings must contain exactly 8 dimensions")
-        for semantic in semantics:
-            if semantic.lifecycle not in {"active", "provisional", "closed"}:
-                raise ValueError("new semantics require a usable lifecycle")
-            missing = CARD_REQUIRED_FIELDS[semantic.card_type] - semantic.body.keys()
-            if missing:
-                raise ValueError(f"{semantic.card_type} missing required fields: {sorted(missing)}")
-
-        for stamp in [evidence.occurred_at, *(item.valid_at for item in semantics)]:
-            if not isinstance(stamp, datetime) or stamp.tzinfo is None or stamp.utcoffset() is None:
-                raise ValueError("observation times must be timezone-aware datetimes")
+        self._validate_semantics(semantics)
+        if not isinstance(evidence.occurred_at, datetime) or evidence.occurred_at.tzinfo is None or evidence.occurred_at.utcoffset() is None:
+            raise ValueError("observation times must be timezone-aware datetimes")
         request_fingerprint = fingerprint(canonical_json({
             "contract": "liveday0:observe:v1", "tenant_id": self.tenant_id,
             "evidence": asdict(evidence), "trace": trace,
             "semantics": [asdict(item) for item in semantics],
         }))
         return evidence, trace, semantics, request_fingerprint
+
+    @staticmethod
+    def _validate_semantics(semantics):
+        for semantic in semantics:
+            if semantic.card_type not in CARD_REQUIRED_FIELDS:
+                raise ValueError("unknown semantic card type")
+            if semantic.lifecycle not in {"active", "provisional", "closed"}:
+                raise ValueError("new semantics require a usable lifecycle")
+            missing = CARD_REQUIRED_FIELDS[semantic.card_type] - semantic.body.keys()
+            if missing:
+                raise ValueError(f"{semantic.card_type} missing required fields: {sorted(missing)}")
+            stamp = semantic.valid_at
+            if not isinstance(stamp, datetime) or stamp.tzinfo is None or stamp.utcoffset() is None:
+                raise ValueError("observation times must be timezone-aware datetimes")
+
+    def read_evidence_interpretation(self, evidence_id):
+        return self.interpretations.read(evidence_id)
+
+    def commit_evidence_interpretation(self, prepared, *, intent_id, trace=None, semantics=(), provenance=None):
+        return self.interpretations.commit(prepared, intent_id=intent_id, trace=trace, semantics=semantics, provenance=provenance)
+
+    def read_explicit_reinterpretation(self, evidence_id, *, explicit_save_intent_id):
+        return self.interpretations.read_explicit(evidence_id, explicit_save_intent_id=explicit_save_intent_id)
+
+    def commit_explicit_reinterpretation(self, prepared, *, explicit_save_intent_id, trace=None, semantics=(), provenance=None):
+        return self.interpretations.commit_explicit(prepared, explicit_save_intent_id=explicit_save_intent_id,
+            trace=trace, semantics=semantics, provenance=provenance)
 
     def _check_deleted_identity(self, conn, key: str | None) -> None:
         if key is None:
@@ -122,12 +144,15 @@ class MemoryService:
                 "SELECT id, request_fingerprint FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
                 (self.tenant_id, evidence.idempotency_key),
             ).fetchone()
+            self._require_evidence(conn, row["id"])
             if row["request_fingerprint"] is None:
                 raise IdempotencyConflict("legacy source key has no frozen request fingerprint")
             if row["request_fingerprint"] != request_fingerprint:
                 raise IdempotencyConflict("source key was already used for a different frozen request")
         evidence_id = row["id"]
-        if created and evidence.embedding is not None:
+        if not created:
+            return observation_receipt(conn, self.tenant_id, evidence_id)
+        if evidence.embedding is not None:
             vector_column = conn.execute(
                 """
                 SELECT EXISTS(
@@ -145,22 +170,9 @@ class MemoryService:
             )
         card_ids: list[UUID] = []
         trace_id: UUID | None = None
-        if created and trace:
-            trace_id = conn.execute(
-                """
-                INSERT INTO life_traces(
-                  id, tenant_id, evidence_id, observation, observation_boundary, accessibility
-                ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s) RETURNING id
-                """,
-                (
-                    uuid5(identity_seed, "trace") if identity_seed else None,
-                    self.tenant_id,
-                    evidence_id,
-                    trace["observation"],
-                    trace.get("observation_boundary", "unknown people, place, and meaning"),
-                    trace.get("accessibility", 0.1),
-                ),
-            ).fetchone()["id"]
+        if trace:
+            trace_id = self._create_trace_conn(conn, evidence_id, trace,
+                trace_id=uuid5(identity_seed, "trace") if identity_seed else None)
         if created:
             for index, semantic in enumerate(semantics):
                 canonical_key = semantic.canonical_key or f"{semantic.card_type}:{evidence_id}:{index}"
@@ -168,6 +180,8 @@ class MemoryService:
                     self._create_card(conn, evidence_id, canonical_key, semantic,
                         card_id=uuid5(identity_seed, f"card:{index}") if identity_seed else None)
                 )
+            conn.execute("""INSERT INTO observation_receipts(tenant_id,evidence_id,trace_id,card_ids,state)
+                VALUES (%s,%s,%s,%s,'active')""", (self.tenant_id,evidence_id,trace_id,card_ids))
             self._bump_revision(conn)
         return {
             "evidence_id": evidence_id,
@@ -175,6 +189,14 @@ class MemoryService:
             "card_ids": card_ids,
             "created": created,
         }
+
+    def _create_trace_conn(self, conn, evidence_id, trace, *, trace_id=None):
+        return conn.execute("""INSERT INTO life_traces(
+            id,tenant_id,evidence_id,observation,observation_boundary,accessibility)
+            VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s) RETURNING id""",
+            (trace_id,self.tenant_id,evidence_id,trace["observation"],
+             trace.get("observation_boundary","unknown people, place, and meaning"),trace.get("accessibility",0.1)),
+        ).fetchone()["id"]
 
     def reobserve_deleted(
         self,
@@ -215,6 +237,8 @@ class MemoryService:
             if intent:
                 if intent["state"] == "deleted":
                     raise DeletedSource("this intent's new source was deleted; use a new intent and key")
+                if intent["state"] == "revoked":
+                    raise InterpretationRevoked("this reobservation intent's interpretation was revoked")
                 if intent["deleted_evidence_id"] != deleted_evidence_id or intent["request_fingerprint"] != request_fingerprint:
                     raise VersionConflict("intent_id was already used for a different frozen request")
                 self._require_evidence(conn, intent["new_evidence_id"])
@@ -627,13 +651,17 @@ class MemoryService:
             ).fetchone()
             if not evidence:
                 raise NotFound("evidence not found")
+            revoke_source(conn, self.tenant_id, evidence_id, object_kind="evidence", object_id=evidence_id, source_deleted=True)
             if evidence["status"] == "deleted":
                 return
             card_ids = [
                 row["card_id"]
                 for row in conn.execute(
-                    "SELECT DISTINCT card_id FROM card_sources WHERE tenant_id=%s AND evidence_id=%s ORDER BY card_id",
-                    (self.tenant_id, evidence_id),
+                    """SELECT card_id FROM card_sources WHERE tenant_id=%s AND evidence_id=%s
+                    UNION SELECT unnest(card_ids) FROM observation_receipts WHERE tenant_id=%s AND evidence_id=%s
+                    UNION SELECT unnest(card_ids) FROM interpretation_intents WHERE tenant_id=%s AND evidence_id=%s
+                    ORDER BY card_id""",
+                    (self.tenant_id,evidence_id,self.tenant_id,evidence_id,self.tenant_id,evidence_id),
                 )
             ]
             conn.execute(
@@ -707,23 +735,18 @@ class MemoryService:
     def delete_card(self, card_id: UUID, *, reason_code: str = "user_request") -> None:
         with tenant_transaction(self.tenant_id) as conn:
             card = self._get_card(conn, card_id, for_update=True, allow_inactive=True)
+            self._delete_card_conn(conn, card_id, reason_code=reason_code)
             if card["lifecycle"] == "deleted":
                 return
-            self._delete_card_conn(conn, card_id, reason_code=reason_code)
             self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)
 
     def _delete_card_conn(self, conn, card_id: UUID, *, reason_code: str) -> None:
         card = self._get_card(conn, card_id, allow_inactive=True)
+        for evidence_id in sources_for_card(conn, self.tenant_id, card_id):
+            revoke_source(conn, self.tenant_id, evidence_id, object_kind="semantic_card", object_id=card_id)
         if card["lifecycle"] == "deleted":
             return
-        # The observation fingerprint may include the now-erased semantic proposal.
-        # Do not retain that content-derived digest or invent an equivalent request.
-        conn.execute(
-            """UPDATE evidence SET request_fingerprint=NULL WHERE tenant_id=%s AND id IN (
-              SELECT evidence_id FROM card_sources WHERE tenant_id=%s AND card_id=%s)""",
-            (self.tenant_id, self.tenant_id, card_id),
-        )
         next_version = card["current_version"] + 1
         conn.execute(
             """
@@ -864,12 +887,14 @@ class MemoryService:
         return row
 
     def _require_evidence(self, conn, evidence_id: UUID) -> dict[str, Any]:
-        row = conn.execute("SELECT id,status,version FROM evidence WHERE tenant_id=%s AND id=%s",
+        row = conn.execute("SELECT id,status,version,interpretation_revoked FROM evidence WHERE tenant_id=%s AND id=%s",
                            (self.tenant_id, evidence_id)).fetchone()
         if not row:
             raise NotFound("evidence not found in tenant")
         if row["status"] == "deleted":
             raise ValueError("source evidence was deleted")
+        if row["interpretation_revoked"]:
+            raise InterpretationRevoked("source interpretation was revoked")
         return row
 
     def _require_endpoint(self, conn, kind: str, object_id: UUID) -> None:
