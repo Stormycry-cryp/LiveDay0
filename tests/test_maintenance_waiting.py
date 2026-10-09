@@ -221,14 +221,18 @@ def test_normal_process_restarts_continue_waiting_and_real_failure_budget(servic
 
 def test_upgrade_preserves_old_history_and_parks_recognized_wait(service):
     cid = new_event(service); pid = make_view(service,cid)
-    assert migrate_down(1) == [3]
+    # Recreate a pre-003 fixture without retaining post-004 source receipts.
+    with tenant_transaction(service.tenant_id) as conn:
+        conn.execute("UPDATE evidence SET request_fingerprint=NULL")
+        conn.execute("UPDATE event_deltas SET request_fingerprint=NULL")
+    assert migrate_down(2) == [4, 3]
     try:
         with tenant_transaction(service.tenant_id) as conn:
             conn.execute("UPDATE projections SET lifecycle='invalidated' WHERE id=%s",(pid,))
             conn.execute("""INSERT INTO maintenance_jobs(tenant_id,job_type,target_kind,target_id,coalesce_key,
               state,attempts,last_error) VALUES (%s,'projection_resynthesis','projection',%s,%s,'retry',7,
               'bounded semantic replacement required')""",(service.tenant_id,pid,f"projection_resynthesis:{pid}"))
-        assert migrate_up() == [3]
+        assert migrate_up() == [3,4]
         row = read_job(service,pid,"projection_resynthesis")
         assert row["state"] == "waiting" and row["wait_reason"] == "semantic_output_required"
         assert row["attempts"] == 7 and row["failure_count"] == 0
@@ -245,7 +249,14 @@ def test_down_migration_refuses_to_discard_wait_or_budget(service,kind):
     failures = {"projection_resynthesis"} if kind == "failure" else ()
     service.maintenance.run_ready(limit=1,fail_job_types=failures)
     before = read_job(service,pid,"projection_resynthesis")
-    with pytest.raises(psycopg.errors.RaiseException,match="explicit reconciliation"):
-        migrate_down(1)
-    assert [r["version"] for r in migration_status()] == [1,2,3]
-    assert read_job(service,pid,"projection_resynthesis") == before
+    # Pass 004's separately tested guard to exercise the existing 003 guard.
+    with tenant_transaction(service.tenant_id) as conn:
+        conn.execute("UPDATE evidence SET request_fingerprint=NULL")
+        conn.execute("UPDATE event_deltas SET request_fingerprint=NULL")
+    try:
+        with pytest.raises(psycopg.errors.RaiseException,match="explicit reconciliation"):
+            migrate_down(2)
+        assert [r["version"] for r in migration_status()] == [1,2,3,4]
+        assert read_job(service,pid,"projection_resynthesis") == before
+    finally:
+        migrate_up()

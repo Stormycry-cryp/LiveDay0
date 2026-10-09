@@ -10,6 +10,10 @@ class VersionConflict(LiveDay0Error):
     pass
 
 
+class IdempotencyConflict(VersionConflict):
+    """A source or delta key cannot claim equivalence to another/unknown request."""
+
+
 class DeletedSource(VersionConflict):
     """A deleted source or consumed re-observation intent cannot be replayed."""
 

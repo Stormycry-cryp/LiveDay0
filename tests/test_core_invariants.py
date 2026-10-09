@@ -38,10 +38,12 @@ def test_concurrent_delta_retry_and_atomic_absorption(service):
         ],
     )["card_ids"][0]
 
+    delta_source = evidence("事件有了结果", key="delta-evidence")
+
     def append_once():
         return service.add_event_delta(
             event_id,
-            evidence("事件有了结果", key="delta-evidence"),
+            delta_source,
             {"current_result": "已取得结果", "unfinished_future": "等待确认"},
             idempotency_key="same-delta",
         )
@@ -318,9 +320,9 @@ def test_only_postgresql_and_relational_adjacency_are_used():
 
 
 def test_migration_up_down_up_is_repeatable():
-    assert [row["version"] for row in migration_status()] == [1, 2, 3]
-    assert migrate_down(3) == [3, 2, 1]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4]
+    assert migrate_down(4) == [4, 3, 2, 1]
     with connect() as conn:
         assert conn.execute("SELECT to_regclass('public.semantic_cards') AS name").fetchone()["name"] is None
-    assert migrate_up() == [1, 2, 3]
-    assert [row["version"] for row in migration_status()] == [1, 2, 3]
+    assert migrate_up() == [1, 2, 3, 4]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3, 4]

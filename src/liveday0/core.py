@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 
 from liveday0.config import event_delta_soft_limit, event_quiet_seconds
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import DeletedSource, NotFound, VersionConflict
+from liveday0.exceptions import DeletedSource, IdempotencyConflict, NotFound, VersionConflict
 from liveday0.maintenance import MaintenanceEngine
 from liveday0.recall import RecallCompiler
 from liveday0.serialization import canonical_json, fingerprint, source_identity_digest
@@ -49,12 +49,11 @@ class MemoryService:
         semantics: Iterable[SemanticInput] = (),
     ) -> dict[str, Any]:
         """Atomically preserve evidence and validated bounded semantic proposals."""
-        evidence, trace, semantics = self._prepare_observation(evidence, trace, semantics)
+        evidence, trace, semantics, request_fingerprint = self._prepare_observation(evidence, trace, semantics)
         with tenant_transaction(self.tenant_id) as conn:
-            return self._observe_conn(conn, evidence, trace, semantics)
+            return self._observe_conn(conn, evidence, trace, semantics, request_fingerprint)
 
-    @staticmethod
-    def _prepare_observation(evidence, trace, semantics):
+    def _prepare_observation(self, evidence, trace, semantics):
         # Detach nested caller-owned bodies before validation or fingerprinting.
         evidence, trace, semantics = deepcopy((evidence, trace, list(semantics)))
         if evidence.idempotency_key is not None and not isinstance(evidence.idempotency_key, str):
@@ -70,7 +69,15 @@ class MemoryService:
             if missing:
                 raise ValueError(f"{semantic.card_type} missing required fields: {sorted(missing)}")
 
-        return evidence, trace, semantics
+        for stamp in [evidence.occurred_at, *(item.valid_at for item in semantics)]:
+            if not isinstance(stamp, datetime) or stamp.tzinfo is None or stamp.utcoffset() is None:
+                raise ValueError("observation times must be timezone-aware datetimes")
+        request_fingerprint = fingerprint(canonical_json({
+            "contract": "liveday0:observe:v1", "tenant_id": self.tenant_id,
+            "evidence": asdict(evidence), "trace": trace,
+            "semantics": [asdict(item) for item in semantics],
+        }))
+        return evidence, trace, semantics, request_fingerprint
 
     def _check_deleted_identity(self, conn, key: str | None) -> None:
         if key is None:
@@ -83,14 +90,14 @@ class MemoryService:
         if deleted:
             raise DeletedSource("source identity was deleted; a new explicit intent and key are required")
 
-    def _observe_conn(self, conn, evidence, trace, semantics, *, identity_seed: UUID | None = None):
+    def _observe_conn(self, conn, evidence, trace, semantics, request_fingerprint, *, identity_seed: UUID | None = None):
         self._check_deleted_identity(conn, evidence.idempotency_key)
         row = conn.execute(
             """
             INSERT INTO evidence(
               id, tenant_id, modality, source_kind, content, object_ref, occurred_at,
-              image_observation, sending_context, model_interpretation, idempotency_key
-            ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+              image_observation, sending_context, model_interpretation, idempotency_key, request_fingerprint
+            ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
             RETURNING id
             """,
@@ -106,14 +113,19 @@ class MemoryService:
                 evidence.sending_context,
                 evidence.model_interpretation,
                 evidence.idempotency_key,
+                request_fingerprint if evidence.idempotency_key is not None else None,
             ),
         ).fetchone()
         created = row is not None
         if not created:
             row = conn.execute(
-                "SELECT id FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
+                "SELECT id, request_fingerprint FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
                 (self.tenant_id, evidence.idempotency_key),
             ).fetchone()
+            if row["request_fingerprint"] is None:
+                raise IdempotencyConflict("legacy source key has no frozen request fingerprint")
+            if row["request_fingerprint"] != request_fingerprint:
+                raise IdempotencyConflict("source key was already used for a different frozen request")
         evidence_id = row["id"]
         if created and evidence.embedding is not None:
             vector_column = conn.execute(
@@ -176,9 +188,10 @@ class MemoryService:
         """Trusted explicit new intent; never an automatic retry/restore switch."""
         if not isinstance(intent_id, UUID):
             raise ValueError("intent_id must be a UUID")
-        evidence, trace, semantics = self._prepare_observation(evidence, trace, semantics)
+        evidence, trace, semantics, request_fingerprint = self._prepare_observation(evidence, trace, semantics)
         if not evidence.idempotency_key:
             raise ValueError("explicit re-observation requires a new stable source key")
+        observation_fingerprint = request_fingerprint
         request_fingerprint = fingerprint(canonical_json({
             "contract": "liveday0:reobserve:v1", "deleted_evidence_id": deleted_evidence_id,
             "evidence": asdict(evidence), "trace": trace,
@@ -213,7 +226,7 @@ class MemoryService:
             if conn.execute("SELECT 1 FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
                             (self.tenant_id, evidence.idempotency_key)).fetchone():
                 raise VersionConflict("explicit re-observation requires an unused source key")
-            result = self._observe_conn(conn, evidence, trace, semantics, identity_seed=identity_seed)
+            result = self._observe_conn(conn, evidence, trace, semantics, observation_fingerprint, identity_seed=identity_seed)
             conn.execute(
                 """INSERT INTO reobservation_intents(
                   tenant_id,intent_id,deleted_evidence_id,new_evidence_id,request_fingerprint,state
@@ -278,27 +291,47 @@ class MemoryService:
         *,
         idempotency_key: str,
     ) -> dict[str, Any]:
+        delta = deepcopy(delta)
+        prepared = self._prepare_observation(evidence, None, ())
+        if not isinstance(idempotency_key, str):
+            raise ValueError("delta idempotency_key must be a string")
+        frozen_delta = canonical_json(delta)
         if not delta:
             raise ValueError("delta cannot be empty")
         if "requires_restructure" in delta and not isinstance(delta["requires_restructure"], bool):
             raise ValueError("requires_restructure must be a boolean")
-        observed = self.observe(evidence)
         with tenant_transaction(self.tenant_id) as conn:
             event = self._get_card(conn, event_id, for_update=True)
+            observed = self._observe_conn(conn, *prepared)
             self._require_evidence(conn, observed["evidence_id"])
             if event["card_type"] != "event":
                 raise ValueError("event deltas can only target events")
+            delta_fingerprint = fingerprint(canonical_json({
+                "contract": "liveday0:event-delta:v1", "tenant_id": self.tenant_id,
+                "event_id": event_id, "evidence_id": observed["evidence_id"],
+                "idempotency_key": idempotency_key, "delta": frozen_delta,
+            }))
             row = conn.execute(
                 """
                 INSERT INTO event_deltas(
-                  tenant_id, event_id, evidence_id, delta, idempotency_key
-                ) VALUES (%s,%s,%s,%s,%s)
+                  tenant_id, event_id, evidence_id, delta, idempotency_key, request_fingerprint
+                ) VALUES (%s,%s,%s,%s,%s,%s)
                 ON CONFLICT (tenant_id, event_id, idempotency_key) DO NOTHING
                 RETURNING id
                 """,
-                (self.tenant_id, event_id, observed["evidence_id"], Jsonb(delta), idempotency_key),
+                (self.tenant_id, event_id, observed["evidence_id"], Jsonb(delta), idempotency_key, delta_fingerprint),
             ).fetchone()
             created = row is not None
+            if not created:
+                row = conn.execute(
+                    """SELECT id, request_fingerprint FROM event_deltas
+                    WHERE tenant_id=%s AND event_id=%s AND idempotency_key=%s""",
+                    (self.tenant_id, event_id, idempotency_key),
+                ).fetchone()
+                if row["request_fingerprint"] is None:
+                    raise IdempotencyConflict("legacy delta key has no frozen request fingerprint")
+                if row["request_fingerprint"] != delta_fingerprint:
+                    raise IdempotencyConflict("delta key was already used for a different source or payload")
             if created:
                 conn.execute(
                     """
@@ -328,7 +361,7 @@ class MemoryService:
                 if delta.get("requires_restructure"):
                     self._hard_invalidate_snapshots(conn)
                 self._bump_revision(conn)
-            return {"delta_id": row["id"] if row else None, "created": created}
+            return {"delta_id": row["id"], "created": created}
 
     def effective_event(self, event_id: UUID) -> dict[str, Any]:
         with tenant_transaction(self.tenant_id, mode="read") as conn:
@@ -376,9 +409,12 @@ class MemoryService:
     ) -> dict[str, Any]:
         if lifecycle not in {"active", "provisional", "closed"}:
             raise ValueError("correction cannot bypass the deletion lifecycle")
-        correction_result = self.observe(correction)
+        corrected_body = deepcopy(corrected_body)
+        canonical_json(corrected_body)
+        prepared = self._prepare_observation(correction, None, ())
         with tenant_transaction(self.tenant_id) as conn:
             card = self._get_card(conn, card_id, for_update=True)
+            correction_result = self._observe_conn(conn, *prepared)
             self._require_evidence(conn, correction_result["evidence_id"])
             if card["current_version"] != expected_version:
                 raise VersionConflict(
@@ -466,8 +502,10 @@ class MemoryService:
         surface_text: str,
         candidates: list[dict[str, Any]],
     ) -> UUID:
-        observed = self.observe(evidence)
+        candidates = deepcopy(candidates)
+        prepared = self._prepare_observation(evidence, None, ())
         with tenant_transaction(self.tenant_id) as conn:
+            observed = self._observe_conn(conn, *prepared)
             self._require_evidence(conn, observed["evidence_id"])
             mention_id = conn.execute(
                 """
@@ -660,7 +698,7 @@ class MemoryService:
             conn.execute(
                 """
                 UPDATE evidence SET content=NULL, object_ref=NULL, image_observation=NULL,
-                  sending_context=NULL, model_interpretation=NULL, idempotency_key=NULL,
+                  sending_context=NULL, model_interpretation=NULL, idempotency_key=NULL, request_fingerprint=NULL,
                   status='deleted', version=version+1
                 WHERE tenant_id=%s AND id=%s
                 """,
@@ -690,7 +728,7 @@ class MemoryService:
                 (self.tenant_id, evidence_id),
             )
             conn.execute(
-                "UPDATE event_deltas SET delta='{}'::jsonb, state='invalidated' WHERE tenant_id=%s AND evidence_id=%s",
+                "UPDATE event_deltas SET delta='{}'::jsonb, request_fingerprint=NULL, state='invalidated' WHERE tenant_id=%s AND evidence_id=%s",
                 (self.tenant_id, evidence_id),
             )
             conn.execute(
@@ -738,6 +776,13 @@ class MemoryService:
         card = self._get_card(conn, card_id, allow_inactive=True)
         if card["lifecycle"] == "deleted":
             return
+        # The observation fingerprint may include the now-erased semantic proposal.
+        # Do not retain that content-derived digest or invent an equivalent request.
+        conn.execute(
+            """UPDATE evidence SET request_fingerprint=NULL WHERE tenant_id=%s AND id IN (
+              SELECT evidence_id FROM card_sources WHERE tenant_id=%s AND card_id=%s)""",
+            (self.tenant_id, self.tenant_id, card_id),
+        )
         next_version = card["current_version"] + 1
         conn.execute(
             """
@@ -818,7 +863,7 @@ class MemoryService:
                     target_id=projection_id, coalesce_key=f"projection_resynthesis:{projection_id}",
                     baseline_version=None, available_after_seconds=0)
         conn.execute(
-            "UPDATE event_deltas SET delta='{}'::jsonb, state='invalidated' WHERE tenant_id=%s AND event_id=%s",
+            "UPDATE event_deltas SET delta='{}'::jsonb, request_fingerprint=NULL, state='invalidated' WHERE tenant_id=%s AND event_id=%s",
             (self.tenant_id, card_id),
         )
         conn.execute(

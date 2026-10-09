@@ -23,19 +23,31 @@ def dependency_identity(service, item):
         }
 
 
+def reusable_delta_source(service, item, label):
+    # Establish a support source through the public delta API, absorb its first
+    # delta, then freeze this exact source request for the next pending delta.
+    req = evidence(label + " update", key=f"update-source:{label}")
+    service.add_event_delta(item["card_ids"][0], req,
+        {"current_result": label}, idempotency_key="establish-support")
+    service.maintenance.make_pending_ready(job_type="event_rewrite")
+    service.maintenance.run_ready(limit=8)
+    return req
+
+
 @pytest.mark.parametrize("role", ["support", "counterevidence"])
 @pytest.mark.parametrize("timing", ["before_read", "after_read"])
 def test_safe_pending_requires_catchup_even_when_source_set_is_unchanged(service, role, timing):
     pid, a, b, c = setup_rebuild(service)
     item, label = (b, "surviving-B") if role == "support" else (c, "counter-C")
+    req = reusable_delta_source(service, item, label)
     prepared = service.maintenance.read_projection_rebuild(pid) if timing == "after_read" else None
     before = dependency_identity(service, item)
     changed_result = f"new-{role}-result"
-    service.add_event_delta(item["card_ids"][0], evidence(label, key=f"source:{label}"),
+    service.add_event_delta(item["card_ids"][0], req,
         {"current_result": changed_result}, idempotency_key="reuse-existing-source")
     assert dependency_identity(service, item) == before  # No new source edge or canonical version.
     effective = service.effective_event(item["card_ids"][0])
-    assert effective["version"] == 1 and effective["pending"]
+    assert effective["version"] == before["version"] and effective["pending"]
     assert effective["body"]["current_result"] == changed_result
     rejected = False
     proof = {"role": role, "timing": timing, "canonical_and_sources_unchanged": True,
@@ -56,14 +68,14 @@ def test_safe_pending_requires_catchup_even_when_source_set_is_unchanged(service
     service.maintenance.make_pending_ready(job_type="event_rewrite")
     service.maintenance.run_ready(limit=8)
     effective = service.effective_event(item["card_ids"][0])
-    assert effective["version"] == 2 and not effective["pending"]
+    assert effective["version"] == before["version"] + 1 and not effective["pending"]
     if prepared is not None:
         with pytest.raises(VersionConflict):
             service.maintenance.commit_projection_rebuild(prepared,
                 replacement_body={"summary": "old canonical output"}, replacement_scope="old-read")
     fresh = service.maintenance.read_projection_rebuild(pid)
     dependency = next(dep for dep in fresh.payload["dependencies"] if dep["card_id"] == str(item["card_ids"][0]))
-    assert dependency["version"] == 2 and dependency["body"]["current_result"] == changed_result
+    assert dependency["version"] == before["version"] + 1 and dependency["body"]["current_result"] == changed_result
     outcome = service.maintenance.commit_projection_rebuild(fresh,
         replacement_body={"summary": dependency["body"]["current_result"]}, replacement_scope="fresh-read")
     assert outcome == {"projection_id": pid, "version": 3, "lifecycle": "active"}
@@ -93,8 +105,9 @@ def test_erased_dependency_residual_delta_cannot_block_or_enter_rebuild(service,
 def test_unrelated_pending_event_does_not_conflict_with_prepared_rebuild(service):
     pid, a, b, c = setup_rebuild(service)
     other = card(service, "unrelated-event")
+    req = reusable_delta_source(service, other, "unrelated-event")
     prepared = service.maintenance.read_projection_rebuild(pid)
-    service.add_event_delta(other["card_ids"][0], evidence("unrelated-event", key="source:unrelated-event"),
+    service.add_event_delta(other["card_ids"][0], req,
         {"current_result": "unrelated change"}, idempotency_key="unrelated-delta")
     assert service.effective_event(other["card_ids"][0])["pending"]
     assert service.maintenance.read_projection_rebuild(pid) == prepared
