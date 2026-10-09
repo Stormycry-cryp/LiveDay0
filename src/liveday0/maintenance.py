@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import json
 from typing import Iterable
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import NotFound
+from liveday0.exceptions import NotFound, VersionConflict
+from liveday0.serialization import canonical_json
+from liveday0.types import ProjectionRebuildInput
 
 
 class MaintenanceEngine:
@@ -15,6 +18,123 @@ class MaintenanceEngine:
 
     def __init__(self, tenant_id: UUID):
         self.tenant_id = tenant_id
+
+    def read_projection_rebuild(self, projection_id: UUID) -> ProjectionRebuildInput:
+        """Read once under the shared gate; synthesis runs outside this transaction."""
+        with tenant_transaction(self.tenant_id, mode="read") as conn:
+            return self._read_projection_rebuild_conn(conn, projection_id)
+
+    def _read_projection_rebuild_conn(self, conn, projection_id: UUID) -> ProjectionRebuildInput:
+        target = conn.execute(
+            """SELECT id,projection_type,current_version,lifecycle,epistemic_state
+            FROM projections WHERE tenant_id=%s AND id=%s""",
+            (self.tenant_id, projection_id),
+        ).fetchone()
+        if not target:
+            raise NotFound("projection not found in tenant")
+        erased = conn.execute(
+            """SELECT 1 FROM deletion_markers WHERE tenant_id=%s
+            AND object_kind='projection_content' AND object_id=%s""",
+            (self.tenant_id, projection_id),
+        ).fetchone()
+        if target["lifecycle"] != "invalidated" or not erased:
+            raise VersionConflict("rebuild requires an invalidated, source-erased projection")
+        rows = conn.execute(
+            """SELECT ps.card_id,ps.support_role,c.card_type,c.current_version,c.lifecycle,
+              c.epistemic_state,v.valid_at,v.body,v.version AS stored_version,
+              EXISTS(SELECT 1 FROM event_deltas d WHERE d.tenant_id=c.tenant_id
+                AND d.event_id=c.id AND d.state='pending') AS pending
+            FROM projection_supports ps
+            JOIN semantic_cards c ON c.tenant_id=ps.tenant_id AND c.id=ps.card_id
+            LEFT JOIN semantic_card_versions v ON v.tenant_id=c.tenant_id AND v.card_id=c.id
+              AND v.version=c.current_version
+            WHERE ps.tenant_id=%s AND ps.projection_id=%s
+            ORDER BY ps.card_id,ps.support_role""",
+            (self.tenant_id, projection_id),
+        ).fetchall()
+        if any(row["stored_version"] is None for row in rows):
+            raise VersionConflict("canonical dependency version is missing")
+        sources: dict[UUID, list[dict]] = {}
+        for row in conn.execute(
+            """SELECT cs.card_id,cs.evidence_id,cs.source_role,e.version,e.status
+            FROM card_sources cs JOIN evidence e ON e.tenant_id=cs.tenant_id AND e.id=cs.evidence_id
+            WHERE cs.tenant_id=%s AND cs.card_id=ANY(%s)
+            ORDER BY cs.card_id,cs.evidence_id,cs.source_role""",
+            (self.tenant_id, sorted({row["card_id"] for row in rows})),
+        ):
+            sources.setdefault(row["card_id"], []).append({
+                "evidence_id": row["evidence_id"], "role": row["source_role"],
+                "version": row["version"], "status": row["status"],
+            })
+        dependencies = []
+        for row in rows:
+            card_sources = sources.get(row["card_id"], [])
+            usable = (row["lifecycle"] in {"active", "provisional"} and bool(card_sources)
+                      and all(source["status"] != "deleted" for source in card_sources))
+            if usable and row["pending"]:
+                raise VersionConflict("pending dependency requires canonical catch-up")
+            dependency = {
+                "card_id": row["card_id"], "role": row["support_role"], "card_type": row["card_type"],
+                "version": row["current_version"], "lifecycle": row["lifecycle"],
+                "sources": card_sources, "usable": usable,
+            }
+            if usable:
+                dependency.update(body=row["body"], valid_at=row["valid_at"],
+                                  epistemic_state=row["epistemic_state"])
+            # Retain erased dependency identities/status for commit comparison, never their bodies.
+            dependencies.append(dependency)
+        if not any(dep["usable"] and dep["role"] == "support" for dep in dependencies):
+            raise VersionConflict("no valid canonical support remains")
+        payload = {"contract": "liveday0:projection-rebuild:v1", "tenant_id": self.tenant_id,
+                   "target": target, "dependencies": dependencies}
+        return ProjectionRebuildInput(self.tenant_id, projection_id, target["current_version"], canonical_json(payload))
+
+    def commit_projection_rebuild(
+        self, prepared: ProjectionRebuildInput, *, replacement_body: dict, replacement_scope: str,
+    ) -> dict:
+        """Bind output to the actual read set from a trusted internal caller."""
+        if prepared.tenant_id != self.tenant_id:
+            raise NotFound("prepared input belongs to another tenant")
+        if not isinstance(replacement_body, dict) or not isinstance(replacement_scope, str):
+            raise ValueError("rebuild requires a complete body and scope")
+        body = json.loads(canonical_json(replacement_body))
+        with tenant_transaction(self.tenant_id) as conn:
+            current = self._read_projection_rebuild_conn(conn, prepared.projection_id)
+            if current != prepared:
+                raise VersionConflict("projection rebuild input changed; read and synthesize again")
+            payload = prepared.payload
+            valid = [dep for dep in payload["dependencies"] if dep["usable"]]
+            body["support_versions"] = {dep["card_id"]: dep["version"] for dep in valid if dep["role"] == "support"}
+            body["counterevidence_versions"] = {dep["card_id"]: dep["version"] for dep in valid if dep["role"] == "counterevidence"}
+            body["rebuild_input_fingerprint"] = prepared.fingerprint
+            version = prepared.target_version + 1
+            conn.execute(
+                """INSERT INTO projection_versions(
+                  tenant_id,projection_id,version,body,lifecycle,epistemic_state
+                ) VALUES (%s,%s,%s,%s,'active',%s)""",
+                (self.tenant_id, prepared.projection_id, version, Jsonb(body), payload["target"]["epistemic_state"]),
+            )
+            conn.execute(
+                """UPDATE projections SET lifecycle='active',current_version=%s,scope=%s,updated_at=now()
+                WHERE tenant_id=%s AND id=%s""",
+                (version, replacement_scope, self.tenant_id, prepared.projection_id),
+            )
+            for card_id in body["support_versions"]:
+                conn.execute(
+                    """INSERT INTO relations(tenant_id,from_kind,from_id,to_kind,to_id,family,relation_type,lifecycle)
+                    VALUES (%s,'semantic_card',%s,'projection',%s,'event_thread','supports_view','active')
+                    ON CONFLICT (tenant_id,from_kind,from_id,to_kind,to_id,relation_type)
+                    DO UPDATE SET lifecycle='active',annotation=NULL,strength=NULL,source_evidence_id=NULL""",
+                    (self.tenant_id, UUID(card_id), prepared.projection_id),
+                )
+            conn.execute(
+                """UPDATE maintenance_jobs SET state='succeeded',last_error=NULL,locked_at=NULL,updated_at=now()
+                WHERE tenant_id=%s AND target_kind='projection' AND target_id=%s
+                  AND job_type='projection_resynthesis' AND state IN ('pending','running','retry')""",
+                (self.tenant_id, prepared.projection_id),
+            )
+            conn.execute("UPDATE tenants SET revision=revision+1 WHERE id=%s", (self.tenant_id,))
+            return {"projection_id": prepared.projection_id, "version": version, "lifecycle": "active"}
 
     def enqueue_candidate_discovery(self, evidence_id: UUID) -> UUID:
         with tenant_transaction(self.tenant_id) as conn:

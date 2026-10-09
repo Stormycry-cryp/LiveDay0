@@ -318,9 +318,9 @@ def test_only_postgresql_and_relational_adjacency_are_used():
 
 
 def test_migration_up_down_up_is_repeatable():
-    assert [row["version"] for row in migration_status()] == [1]
-    assert migrate_down(1) == [1]
+    assert [row["version"] for row in migration_status()] == [1, 2]
+    assert migrate_down(2) == [2, 1]
     with connect() as conn:
         assert conn.execute("SELECT to_regclass('public.semantic_cards') AS name").fetchone()["name"] is None
-    assert migrate_up() == [1]
-    assert [row["version"] for row in migration_status()] == [1]
+    assert migrate_up() == [1, 2]
+    assert [row["version"] for row in migration_status()] == [1, 2]

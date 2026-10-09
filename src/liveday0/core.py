@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Iterable
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 from psycopg.types.json import Jsonb
 
 from liveday0.config import event_delta_soft_limit, event_quiet_seconds
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import NotFound, VersionConflict
+from liveday0.exceptions import DeletedSource, NotFound, VersionConflict
 from liveday0.maintenance import MaintenanceEngine
 from liveday0.recall import RecallCompiler
+from liveday0.serialization import canonical_json, fingerprint, source_identity_digest
 from liveday0.types import EvidenceInput, RecallOptions, SemanticInput
 
 
@@ -46,11 +49,20 @@ class MemoryService:
         semantics: Iterable[SemanticInput] = (),
     ) -> dict[str, Any]:
         """Atomically preserve evidence and validated bounded semantic proposals."""
+        evidence, trace, semantics = self._prepare_observation(evidence, trace, semantics)
+        with tenant_transaction(self.tenant_id) as conn:
+            return self._observe_conn(conn, evidence, trace, semantics)
+
+    @staticmethod
+    def _prepare_observation(evidence, trace, semantics):
+        # Detach nested caller-owned bodies before validation or fingerprinting.
+        evidence, trace, semantics = deepcopy((evidence, trace, list(semantics)))
+        if evidence.idempotency_key is not None and not isinstance(evidence.idempotency_key, str):
+            raise ValueError("source idempotency_key must be a string or None")
         if not evidence.content and not evidence.object_ref:
             raise ValueError("evidence needs immutable content or a traceable object_ref")
         if evidence.embedding is not None and len(evidence.embedding) != 8:
             raise ValueError("v1 pgvector embeddings must contain exactly 8 dimensions")
-        semantics = list(semantics)
         for semantic in semantics:
             if semantic.lifecycle not in {"active", "provisional", "closed"}:
                 raise ValueError("new semantics require a usable lifecycle")
@@ -58,92 +70,168 @@ class MemoryService:
             if missing:
                 raise ValueError(f"{semantic.card_type} missing required fields: {sorted(missing)}")
 
-        with tenant_transaction(self.tenant_id) as conn:
-            row = conn.execute(
-                """
-                INSERT INTO evidence(
-                  tenant_id, modality, source_kind, content, object_ref, occurred_at,
-                  image_observation, sending_context, model_interpretation, idempotency_key
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
-                RETURNING id
-                """,
-                (
-                    self.tenant_id,
-                    evidence.modality,
-                    evidence.source_kind,
-                    evidence.content,
-                    evidence.object_ref,
-                    evidence.occurred_at,
-                    evidence.image_observation,
-                    evidence.sending_context,
-                    evidence.model_interpretation,
-                    evidence.idempotency_key,
-                ),
-            ).fetchone()
-            created = row is not None
-            if not created:
-                row = conn.execute(
-                    "SELECT id FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
-                    (self.tenant_id, evidence.idempotency_key),
-                ).fetchone()
-            evidence_id = row["id"]
-            if created and evidence.embedding is not None:
-                vector_column = conn.execute(
-                    """
-                    SELECT EXISTS(
-                      SELECT 1 FROM information_schema.columns
-                      WHERE table_schema='public' AND table_name='evidence' AND column_name='embedding'
-                    ) AS value
-                    """
-                ).fetchone()["value"]
-                if not vector_column:
-                    raise RuntimeError("pgvector candidate lane is unavailable in this PostgreSQL image")
-                literal = "[" + ",".join(str(value) for value in evidence.embedding) + "]"
-                conn.execute(
-                    "UPDATE evidence SET embedding=%s::vector WHERE tenant_id=%s AND id=%s",
-                    (literal, self.tenant_id, evidence_id),
-                )
-            card_ids: list[UUID] = []
-            trace_id: UUID | None = None
-            if created and trace:
-                trace_id = conn.execute(
-                    """
-                    INSERT INTO life_traces(
-                      tenant_id, evidence_id, observation, observation_boundary, accessibility
-                    ) VALUES (%s,%s,%s,%s,%s) RETURNING id
-                    """,
-                    (
-                        self.tenant_id,
-                        evidence_id,
-                        trace["observation"],
-                        trace.get("observation_boundary", "unknown people, place, and meaning"),
-                        trace.get("accessibility", 0.1),
-                    ),
-                ).fetchone()["id"]
-            if created:
-                for index, semantic in enumerate(semantics):
-                    canonical_key = semantic.canonical_key or f"{semantic.card_type}:{evidence_id}:{index}"
-                    card_ids.append(
-                        self._create_card(conn, evidence_id, canonical_key, semantic)
-                    )
-                self._bump_revision(conn)
-            return {
-                "evidence_id": evidence_id,
-                "trace_id": trace_id,
-                "card_ids": card_ids,
-                "created": created,
-            }
+        return evidence, trace, semantics
 
-    def _create_card(self, conn, evidence_id: UUID, canonical_key: str, semantic: SemanticInput) -> UUID:
-        card_id = conn.execute(
+    def _check_deleted_identity(self, conn, key: str | None) -> None:
+        if key is None:
+            return
+        deleted = conn.execute(
+            """SELECT 1 FROM deletion_markers WHERE tenant_id=%s
+            AND object_kind='evidence' AND source_identity_digest=%s""",
+            (self.tenant_id, source_identity_digest(self.tenant_id, key)),
+        ).fetchone()
+        if deleted:
+            raise DeletedSource("source identity was deleted; a new explicit intent and key are required")
+
+    def _observe_conn(self, conn, evidence, trace, semantics, *, identity_seed: UUID | None = None):
+        self._check_deleted_identity(conn, evidence.idempotency_key)
+        row = conn.execute(
             """
-            INSERT INTO semantic_cards(
-              tenant_id, canonical_key, card_type, lifecycle, epistemic_state, valid_at
-            ) VALUES (%s,%s,%s,%s,%s,%s)
+            INSERT INTO evidence(
+              id, tenant_id, modality, source_kind, content, object_ref, occurred_at,
+              image_observation, sending_context, model_interpretation, idempotency_key
+            ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
             RETURNING id
             """,
             (
+                uuid5(identity_seed, "evidence") if identity_seed else None,
+                self.tenant_id,
+                evidence.modality,
+                evidence.source_kind,
+                evidence.content,
+                evidence.object_ref,
+                evidence.occurred_at,
+                evidence.image_observation,
+                evidence.sending_context,
+                evidence.model_interpretation,
+                evidence.idempotency_key,
+            ),
+        ).fetchone()
+        created = row is not None
+        if not created:
+            row = conn.execute(
+                "SELECT id FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
+                (self.tenant_id, evidence.idempotency_key),
+            ).fetchone()
+        evidence_id = row["id"]
+        if created and evidence.embedding is not None:
+            vector_column = conn.execute(
+                """
+                SELECT EXISTS(
+                  SELECT 1 FROM information_schema.columns
+                  WHERE table_schema='public' AND table_name='evidence' AND column_name='embedding'
+                ) AS value
+                """
+            ).fetchone()["value"]
+            if not vector_column:
+                raise RuntimeError("pgvector candidate lane is unavailable in this PostgreSQL image")
+            literal = "[" + ",".join(str(value) for value in evidence.embedding) + "]"
+            conn.execute(
+                "UPDATE evidence SET embedding=%s::vector WHERE tenant_id=%s AND id=%s",
+                (literal, self.tenant_id, evidence_id),
+            )
+        card_ids: list[UUID] = []
+        trace_id: UUID | None = None
+        if created and trace:
+            trace_id = conn.execute(
+                """
+                INSERT INTO life_traces(
+                  id, tenant_id, evidence_id, observation, observation_boundary, accessibility
+                ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s) RETURNING id
+                """,
+                (
+                    uuid5(identity_seed, "trace") if identity_seed else None,
+                    self.tenant_id,
+                    evidence_id,
+                    trace["observation"],
+                    trace.get("observation_boundary", "unknown people, place, and meaning"),
+                    trace.get("accessibility", 0.1),
+                ),
+            ).fetchone()["id"]
+        if created:
+            for index, semantic in enumerate(semantics):
+                canonical_key = semantic.canonical_key or f"{semantic.card_type}:{evidence_id}:{index}"
+                card_ids.append(
+                    self._create_card(conn, evidence_id, canonical_key, semantic,
+                        card_id=uuid5(identity_seed, f"card:{index}") if identity_seed else None)
+                )
+            self._bump_revision(conn)
+        return {
+            "evidence_id": evidence_id,
+            "trace_id": trace_id,
+            "card_ids": card_ids,
+            "created": created,
+        }
+
+    def reobserve_deleted(
+        self,
+        deleted_evidence_id: UUID,
+        evidence: EvidenceInput,
+        *,
+        intent_id: UUID,
+        trace: dict[str, Any] | None = None,
+        semantics: Iterable[SemanticInput] = (),
+    ) -> dict[str, Any]:
+        """Trusted explicit new intent; never an automatic retry/restore switch."""
+        if not isinstance(intent_id, UUID):
+            raise ValueError("intent_id must be a UUID")
+        evidence, trace, semantics = self._prepare_observation(evidence, trace, semantics)
+        if not evidence.idempotency_key:
+            raise ValueError("explicit re-observation requires a new stable source key")
+        request_fingerprint = fingerprint(canonical_json({
+            "contract": "liveday0:reobserve:v1", "deleted_evidence_id": deleted_evidence_id,
+            "evidence": asdict(evidence), "trace": trace,
+            "semantics": [asdict(semantic) for semantic in semantics],
+        }))
+        # Opaque IDs derive from tenant + intent + position, never from life content.
+        # This keeps the intent table content-free except for its erasable fingerprint,
+        # while retry returns the original IDs even if later source links change.
+        identity_seed = uuid5(self.tenant_id, str(intent_id))
+        with tenant_transaction(self.tenant_id) as conn:
+            old = conn.execute("SELECT status FROM evidence WHERE tenant_id=%s AND id=%s",
+                               (self.tenant_id, deleted_evidence_id)).fetchone()
+            if not old:
+                raise NotFound("deleted source not found in tenant")
+            if old["status"] != "deleted":
+                raise VersionConflict("explicit re-observation requires a deleted source")
+            intent = conn.execute(
+                "SELECT * FROM reobservation_intents WHERE tenant_id=%s AND intent_id=%s",
+                (self.tenant_id, intent_id),
+            ).fetchone()
+            if intent:
+                if intent["state"] == "deleted":
+                    raise DeletedSource("this intent's new source was deleted; use a new intent and key")
+                if intent["deleted_evidence_id"] != deleted_evidence_id or intent["request_fingerprint"] != request_fingerprint:
+                    raise VersionConflict("intent_id was already used for a different frozen request")
+                self._require_evidence(conn, intent["new_evidence_id"])
+                return {"evidence_id": intent["new_evidence_id"],
+                        "trace_id": uuid5(identity_seed, "trace") if trace else None,
+                        "card_ids": [uuid5(identity_seed, f"card:{i}") for i in range(len(semantics))],
+                        "created": False}
+            self._check_deleted_identity(conn, evidence.idempotency_key)
+            if conn.execute("SELECT 1 FROM evidence WHERE tenant_id=%s AND idempotency_key=%s",
+                            (self.tenant_id, evidence.idempotency_key)).fetchone():
+                raise VersionConflict("explicit re-observation requires an unused source key")
+            result = self._observe_conn(conn, evidence, trace, semantics, identity_seed=identity_seed)
+            conn.execute(
+                """INSERT INTO reobservation_intents(
+                  tenant_id,intent_id,deleted_evidence_id,new_evidence_id,request_fingerprint,state
+                ) VALUES (%s,%s,%s,%s,%s,'active')""",
+                (self.tenant_id, intent_id, deleted_evidence_id, result["evidence_id"], request_fingerprint),
+            )
+            return result
+
+    def _create_card(self, conn, evidence_id: UUID, canonical_key: str, semantic: SemanticInput, *, card_id: UUID | None = None) -> UUID:
+        card_id = conn.execute(
+            """
+            INSERT INTO semantic_cards(
+              id, tenant_id, canonical_key, card_type, lifecycle, epistemic_state, valid_at
+            ) VALUES (coalesce(%s,gen_random_uuid()),%s,%s,%s,%s,%s,%s)
+            RETURNING id
+            """,
+            (
+                card_id,
                 self.tenant_id,
                 canonical_key,
                 semantic.card_type,
@@ -577,7 +665,7 @@ class MemoryService:
     def delete_evidence(self, evidence_id: UUID, *, reason_code: str = "user_request") -> None:
         with tenant_transaction(self.tenant_id) as conn:
             evidence = conn.execute(
-                "SELECT id, status FROM evidence WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                "SELECT id, status, idempotency_key FROM evidence WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, evidence_id),
             ).fetchone()
             if not evidence:
@@ -645,10 +733,16 @@ class MemoryService:
                 self._delete_card_conn(conn, card_id, reason_code="source_deleted")
             conn.execute(
                 """
-                INSERT INTO deletion_markers(tenant_id, object_kind, object_id, reason_code)
-                VALUES (%s,'evidence',%s,%s) ON CONFLICT DO NOTHING
+                INSERT INTO deletion_markers(tenant_id, object_kind, object_id, reason_code, source_identity_digest)
+                VALUES (%s,'evidence',%s,%s,%s) ON CONFLICT DO NOTHING
                 """,
-                (self.tenant_id, evidence_id, reason_code),
+                (self.tenant_id, evidence_id, reason_code,
+                 source_identity_digest(self.tenant_id, evidence["idempotency_key"])
+                 if evidence["idempotency_key"] is not None else None),
+            )
+            conn.execute(
+                """UPDATE reobservation_intents SET state='deleted', request_fingerprint=NULL
+                WHERE tenant_id=%s AND new_evidence_id=%s""", (self.tenant_id, evidence_id),
             )
             self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)

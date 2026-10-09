@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import json
 from typing import Any, Literal
+from uuid import UUID
+
+from liveday0.serialization import fingerprint
 
 CardType = Literal["event", "fact", "prospective"]
 ProjectionType = Literal["current_state", "life_thread", "relationship"]
@@ -48,3 +52,22 @@ class RecallOptions:
     timeout_ms: int = 800
     simulate_vector_timeout: bool = False
     query_embedding: tuple[float, ...] | None = None
+
+
+@dataclass(frozen=True)
+class ProjectionRebuildInput:
+    """Immutable read set for a trusted internal rebuild, not an authorization ticket."""
+
+    tenant_id: UUID
+    projection_id: UUID
+    target_version: int
+    canonical_input: str
+
+    @property
+    def fingerprint(self) -> str:
+        return fingerprint(self.canonical_input)
+
+    @property
+    def payload(self) -> dict[str, Any]:
+        # Each access returns a detached value; nested edits cannot alter the read set.
+        return json.loads(self.canonical_input)

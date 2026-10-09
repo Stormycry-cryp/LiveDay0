@@ -10,6 +10,10 @@ class VersionConflict(LiveDay0Error):
     pass
 
 
+class DeletedSource(VersionConflict):
+    """A deleted source or consumed re-observation intent cannot be replayed."""
+
+
 class SnapshotInvalidated(LiveDay0Error):
     pass
 
