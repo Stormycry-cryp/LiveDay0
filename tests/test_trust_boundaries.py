@@ -253,7 +253,7 @@ def test_deleted_projection_content_requires_version_bound_rebuild(service):
         body={"summary": "private polluted summary"}, support_card_ids=[*a["card_ids"], *b["card_ids"]])
     service.delete_evidence(a["evidence_id"])
     result = service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "private polluted summary"}})
-    assert result[0]["state"] == "retry"
+    assert result[0]["state"] == "waiting"
     with db.tenant_transaction(service.tenant_id, mode="read") as conn:
         row = conn.execute("SELECT lifecycle,scope FROM projections WHERE id=%s", (pid,)).fetchone()
         assert row == {"lifecycle": "invalidated", "scope": ""}

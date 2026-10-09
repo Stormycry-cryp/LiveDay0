@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from datetime import timedelta
 import json
 from typing import Iterable
 from uuid import UUID
 
+from psycopg import Error as DatabaseError
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import NotFound, VersionConflict
-from liveday0.serialization import canonical_json
+from liveday0.serialization import canonical_json, fingerprint
 from liveday0.types import ProjectionRebuildInput
+
+
+MAX_JOB_FAILURES = 3
 
 
 class MaintenanceEngine:
@@ -99,6 +102,9 @@ class MaintenanceEngine:
             raise ValueError("rebuild requires a complete body and scope")
         body = json.loads(canonical_json(replacement_body))
         with tenant_transaction(self.tenant_id) as conn:
+            blocked = self._latest_job(conn, f"projection_resynthesis:{prepared.projection_id}")
+            if blocked and blocked["state"] == "dead" and (blocked["failure_count"] >= MAX_JOB_FAILURES or blocked["last_error"] is not None):
+                raise VersionConflict("terminal maintenance failure requires explicit recovery")
             current = self._read_projection_rebuild_conn(conn, prepared.projection_id)
             if current != prepared:
                 raise VersionConflict("projection rebuild input changed; read and synthesize again")
@@ -128,9 +134,10 @@ class MaintenanceEngine:
                     (self.tenant_id, UUID(card_id), prepared.projection_id),
                 )
             conn.execute(
-                """UPDATE maintenance_jobs SET state='succeeded',last_error=NULL,locked_at=NULL,updated_at=now()
+                """UPDATE maintenance_jobs SET state='succeeded',last_error=NULL,locked_at=NULL,
+                  wait_reason=NULL,wait_input_fingerprint=NULL,updated_at=now()
                 WHERE tenant_id=%s AND target_kind='projection' AND target_id=%s
-                  AND job_type='projection_resynthesis' AND state IN ('pending','running','retry')""",
+                  AND job_type='projection_resynthesis' AND state IN ('pending','running','retry','waiting')""",
                 (self.tenant_id, prepared.projection_id),
             )
             conn.execute("UPDATE tenants SET revision=revision+1 WHERE id=%s", (self.tenant_id,))
@@ -144,19 +151,9 @@ class MaintenanceEngine:
                 raise NotFound("evidence not found in tenant")
             if source["status"] == "deleted":
                 raise ValueError("cannot schedule deleted evidence")
-            row = conn.execute(
-                """
-                INSERT INTO maintenance_jobs(
-                  tenant_id, job_type, target_kind, target_id, coalesce_key
-                ) VALUES (%s,'candidate_discovery','evidence',%s,%s)
-                ON CONFLICT (tenant_id, coalesce_key)
-                  WHERE state IN ('pending','running','retry')
-                DO UPDATE SET updated_at=now()
-                RETURNING id
-                """,
-                (self.tenant_id, evidence_id, f"candidate_discovery:{evidence_id}"),
-            ).fetchone()
-            return row["id"]
+            return self._enqueue_job_conn(conn, job_type="candidate_discovery", target_kind="evidence",
+                target_id=evidence_id, coalesce_key=f"candidate_discovery:{evidence_id}",
+                baseline_version=None, available_after_seconds=0)
 
     def run_ready(
         self,
@@ -167,6 +164,12 @@ class MaintenanceEngine:
     ) -> list[dict]:
         failures = set(fail_job_types)
         projection_outputs = projection_outputs or {}
+        if any(not isinstance(key, UUID) or not isinstance(body, dict) for key, body in projection_outputs.items()):
+            raise ValueError("projection outputs require UUID keys and complete body objects")
+        projection_outputs = {key: json.loads(canonical_json(body)) for key, body in projection_outputs.items()}
+        if projection_outputs:
+            with tenant_transaction(self.tenant_id) as conn:
+                self._wake_output_waiters(conn, projection_outputs)
         results: list[dict] = []
         for _ in range(limit):
             with tenant_transaction(self.tenant_id) as conn:
@@ -181,56 +184,186 @@ class MaintenanceEngine:
                 ).fetchone()
                 if not job:
                     break
+                if job["failure_count"] >= MAX_JOB_FAILURES:
+                    self._fail_terminal(conn, job["id"], job["last_error"] or "retry budget exhausted")
+                    results.append({"job_id": job["id"], "state": "dead"})
+                    continue
+                # Keep the claim outside the savepoint so a target SQL error cannot
+                # erase its attempt count. The tenant gate remains held throughout.
                 conn.execute(
-                    """
-                    UPDATE maintenance_jobs
+                    """UPDATE maintenance_jobs
                     SET state='running', attempts=attempts+1, locked_at=now(), updated_at=now()
-                    WHERE tenant_id=%s AND id=%s
-                    """,
+                    WHERE tenant_id=%s AND id=%s""",
                     (self.tenant_id, job["id"]),
                 )
-                if job["job_type"] in failures:
-                    self._retry(conn, job["id"], "simulated bounded re-synthesis failure")
-                    results.append({"job_id": job["id"], "state": "retry"})
-                    continue
                 try:
-                    if job["job_type"] == "event_rewrite":
-                        outcome = self._rewrite_event(conn, job)
-                    elif job["job_type"] == "projection_resynthesis":
-                        outcome = self._resynthesize_projection(
-                            conn,
-                            job,
-                            projection_outputs.get(job["target_id"]),
-                        )
-                    else:
-                        outcome = "candidate envelope recorded"
-                    if outcome == "retry":
-                        results.append({"job_id": job["id"], "state": "retry"})
-                        continue
-                    conn.execute(
-                        """
-                        UPDATE maintenance_jobs
-                        SET state='succeeded', last_error=NULL, locked_at=NULL, updated_at=now()
-                        WHERE tenant_id=%s AND id=%s
-                        """,
-                        (self.tenant_id, job["id"]),
-                    )
-                    results.append({"job_id": job["id"], "state": "succeeded", "outcome": outcome})
-                except Exception as exc:  # failure remains durable and retryable
-                    self._retry(conn, job["id"], f"{type(exc).__name__}: {exc}")
-                    results.append({"job_id": job["id"], "state": "retry"})
+                    with conn.transaction():
+                        if job["job_type"] in failures:
+                            outcome = self._retry(conn, job["id"], "simulated bounded re-synthesis failure")
+                        elif job["job_type"] == "event_rewrite":
+                            outcome = self._rewrite_event(conn, job)
+                        elif job["job_type"] == "projection_resynthesis":
+                            outcome = self._resynthesize_projection(conn, job, projection_outputs.get(job["target_id"]))
+                        else:
+                            outcome = "candidate_discovery_not_implemented"
+                            self._fail_terminal(conn, job["id"], outcome)
+                        if outcome in {"retry", "dead", "waiting"}:
+                            result = {"job_id": job["id"], "state": outcome}
+                            if outcome == "waiting":
+                                result["outcome"] = job["wait_reason"]
+                        elif job["job_type"] == "candidate_discovery":
+                            result = {"job_id": job["id"], "state": "dead", "outcome": outcome}
+                        else:
+                            conn.execute(
+                                """UPDATE maintenance_jobs
+                                SET state='succeeded', last_error=NULL, locked_at=NULL,
+                                    wait_reason=NULL,wait_input_fingerprint=NULL,updated_at=now()
+                                WHERE tenant_id=%s AND id=%s""",
+                                (self.tenant_id, job["id"]),
+                            )
+                            result = {"job_id": job["id"], "state": "succeeded", "outcome": outcome}
+                except Exception as exc:
+                    # The nested transaction has rolled back; the outer transaction
+                    # can now persist a bounded, content-free diagnostic safely.
+                    error = type(exc).__name__
+                    if isinstance(exc, DatabaseError) and exc.sqlstate:
+                        error += f" SQLSTATE={exc.sqlstate}"
+                    state = self._retry(conn, job["id"], error)
+                    result = {"job_id": job["id"], "state": state}
+                results.append(result)
         return results
 
-    def _retry(self, conn, job_id: UUID, error: str) -> None:
+    def _fail_terminal(self, conn, job_id: UUID, error: str) -> None:
         conn.execute(
-            """
-            UPDATE maintenance_jobs
-            SET state='retry', last_error=%s, locked_at=NULL,
-                available_at=now() + interval '1 second', updated_at=now()
-            WHERE tenant_id=%s AND id=%s
-            """,
-            (error, self.tenant_id, job_id),
+            """UPDATE maintenance_jobs SET state='dead',last_error=%s,locked_at=NULL,
+              wait_reason=NULL,wait_input_fingerprint=NULL,updated_at=now()
+            WHERE tenant_id=%s AND id=%s""", (error, self.tenant_id, job_id),
         )
+
+    def _retry(self, conn, job_id: UUID, error: str) -> str:
+        row = conn.execute(
+            """UPDATE maintenance_jobs
+            SET state=CASE WHEN failure_count+1 >= %s THEN 'dead' ELSE 'retry' END,
+                failure_count=failure_count+1,wait_reason=NULL,wait_input_fingerprint=NULL,
+                last_error=%s, locked_at=NULL,
+                available_at=now() + power(2, LEAST(failure_count,1)) * interval '1 second',
+                updated_at=now()
+            WHERE tenant_id=%s AND id=%s RETURNING state""",
+            (MAX_JOB_FAILURES, error, self.tenant_id, job_id),
+        ).fetchone()
+        return row["state"]
+
+    def _invalidate_dependents(self, conn, card_id: UUID) -> list[UUID]:
+        """Dirty only directly linked views in the caller's tenant write transaction."""
+        ids = [row["id"] for row in conn.execute(
+            """UPDATE projections p SET lifecycle='invalidated',updated_at=now()
+            WHERE p.tenant_id=%s AND p.lifecycle IN ('active','dormant','invalidated') AND EXISTS(
+              SELECT 1 FROM projection_supports ps WHERE ps.tenant_id=p.tenant_id
+                AND ps.projection_id=p.id AND ps.card_id=%s) RETURNING p.id""",
+            (self.tenant_id, card_id),
+        )]
+        for projection_id in sorted(ids):
+            self._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection",
+                target_id=projection_id, coalesce_key=f"projection_resynthesis:{projection_id}",
+                baseline_version=None, available_after_seconds=0)
+        return sorted(ids)
+
+    def _latest_job(self, conn, coalesce_key: str):
+        return conn.execute(
+            """SELECT * FROM maintenance_jobs WHERE tenant_id=%s AND coalesce_key=%s
+            ORDER BY created_at DESC,id DESC LIMIT 1""", (self.tenant_id, coalesce_key),
+        ).fetchone()
+
+    def _enqueue_job_conn(self, conn, *, job_type, target_kind, target_id, coalesce_key,
+                          baseline_version, available_after_seconds):
+        # The caller holds the tenant write gate, so checking and coalescing are atomic.
+        latest = self._latest_job(conn, coalesce_key)
+        if latest and latest["state"] == "dead" and (latest["failure_count"] >= MAX_JOB_FAILURES or latest["last_error"] is not None):
+            return latest["id"]
+        if latest and latest["state"] == "waiting":
+            if latest["wait_input_fingerprint"] != self._dependency_fingerprint(conn, latest):
+                self._wake_job(conn, latest["id"])
+            return latest["id"]
+        return conn.execute(
+            """INSERT INTO maintenance_jobs(tenant_id,job_type,target_kind,target_id,coalesce_key,
+              baseline_version,available_at)
+            VALUES (%s,%s,%s,%s,%s,%s,now()+%s*interval '1 second')
+            ON CONFLICT (tenant_id,coalesce_key) WHERE state IN ('pending','running','retry','waiting')
+            DO UPDATE SET available_at=CASE WHEN maintenance_jobs.state='retry'
+                THEN maintenance_jobs.available_at
+                ELSE LEAST(maintenance_jobs.available_at,excluded.available_at) END,updated_at=now()
+            RETURNING id""",
+            (self.tenant_id,job_type,target_kind,target_id,coalesce_key,baseline_version,available_after_seconds),
+        ).fetchone()["id"]
+
+    def _dependency_fingerprint(self, conn, job) -> str:
+        # Only identity/version/status metadata; never retain evidence or view bodies.
+        target = conn.execute(
+            "SELECT id,current_version,lifecycle FROM projections WHERE tenant_id=%s AND id=%s",
+            (self.tenant_id, job["target_id"]),
+        ).fetchone()
+        dependencies = conn.execute(
+            """SELECT ps.card_id,ps.support_role,c.current_version,c.lifecycle
+            FROM projection_supports ps JOIN semantic_cards c
+              ON c.tenant_id=ps.tenant_id AND c.id=ps.card_id
+            WHERE ps.tenant_id=%s AND ps.projection_id=%s ORDER BY ps.card_id,ps.support_role""",
+            (self.tenant_id, job["target_id"]),
+        ).fetchall()
+        ids = sorted({row["card_id"] for row in dependencies})
+        sources = conn.execute(
+            """SELECT cs.card_id,cs.evidence_id,cs.source_role,e.version,e.status
+            FROM card_sources cs JOIN evidence e ON e.tenant_id=cs.tenant_id AND e.id=cs.evidence_id
+            WHERE cs.tenant_id=%s AND cs.card_id=ANY(%s)
+            ORDER BY cs.card_id,cs.evidence_id,cs.source_role""", (self.tenant_id, ids),
+        ).fetchall()
+        pending = conn.execute(
+            """SELECT id,event_id,evidence_id FROM event_deltas
+            WHERE tenant_id=%s AND event_id=ANY(%s) AND state='pending' ORDER BY event_id,id""",
+            (self.tenant_id, ids),
+        ).fetchall()
+        return fingerprint(canonical_json({"target":target,"dependencies":dependencies,
+                                           "sources":sources,"pending":pending}))
+
+    def _wait(self, conn, job, reason: str) -> str:
+        job["wait_reason"] = reason
+        conn.execute(
+            """UPDATE maintenance_jobs SET state='waiting',wait_reason=%s,
+              wait_input_fingerprint=%s,locked_at=NULL,updated_at=now()
+            WHERE tenant_id=%s AND id=%s""",
+            (reason,self._dependency_fingerprint(conn,job),self.tenant_id,job["id"]),
+        )
+        return "waiting"
+
+    def _wake_job(self, conn, job_id):
+        return conn.execute(
+            """UPDATE maintenance_jobs SET state='pending',available_at=now(),
+              wait_reason=NULL,wait_input_fingerprint=NULL,updated_at=now()
+            WHERE tenant_id=%s AND id=%s AND state='waiting'""", (self.tenant_id, job_id),
+        ).rowcount
+
+    def resume_waiting(self, job_id: UUID) -> bool:
+        """Trusted operator hook; keeps the failure budget and never revives dead jobs."""
+        with tenant_transaction(self.tenant_id) as conn:
+            return bool(self._wake_job(conn, job_id))
+
+    def _wake_output_waiters(self, conn, outputs):
+        jobs = conn.execute(
+            """SELECT j.* FROM maintenance_jobs j JOIN projections p
+              ON p.tenant_id=j.tenant_id AND p.id=j.target_id
+            WHERE j.tenant_id=%s AND j.target_id=ANY(%s) AND j.job_type='projection_resynthesis'
+              AND j.state='waiting' AND p.lifecycle IN ('active','dormant','invalidated')
+              AND j.wait_reason IN ('dependency_pending','semantic_output_required')
+              AND NOT EXISTS(SELECT 1 FROM deletion_markers m WHERE m.tenant_id=j.tenant_id
+                AND m.object_kind='projection_content' AND m.object_id=j.target_id)
+              AND NOT EXISTS(SELECT 1 FROM projection_supports ps
+                JOIN semantic_cards c ON c.tenant_id=ps.tenant_id AND c.id=ps.card_id
+                JOIN event_deltas d ON d.tenant_id=ps.tenant_id AND d.event_id=ps.card_id
+                WHERE ps.tenant_id=j.tenant_id AND ps.projection_id=j.target_id
+                  AND c.lifecycle IN ('active','provisional') AND d.state='pending')""",
+            (self.tenant_id,list(outputs)),
+        ).fetchall()
+        for job in jobs:
+            self._wake_job(conn, job["id"])
 
     def make_retries_ready(self) -> int:
         """Local operator hook; retry policy remains deterministic and idempotent."""
@@ -271,7 +404,7 @@ class MaintenanceEngine:
                 """
                 UPDATE maintenance_jobs j SET available_at=now(), updated_at=now()
                 WHERE j.tenant_id=%s AND j.job_type='event_rewrite'
-                  AND j.state IN ('pending','retry')
+                  AND j.state='pending'
                   AND EXISTS (
                     SELECT 1 FROM event_deltas d
                     WHERE d.tenant_id=j.tenant_id AND d.event_id=j.target_id
@@ -305,13 +438,11 @@ class MaintenanceEngine:
         if job["baseline_version"] is not None and card["current_version"] != job["baseline_version"]:
             conn.execute(
                 """
-                UPDATE maintenance_jobs SET state='retry', baseline_version=%s,
-                  last_error='baseline version advanced', available_at=now(), locked_at=NULL, updated_at=now()
+                UPDATE maintenance_jobs SET baseline_version=%s
                 WHERE tenant_id=%s AND id=%s
                 """,
                 (card["current_version"], self.tenant_id, job["id"]),
             )
-            return "retry"
         version = conn.execute(
             """
             SELECT * FROM semantic_card_versions
@@ -356,6 +487,7 @@ class MaintenanceEngine:
             (self.tenant_id, [delta["id"] for delta in deltas]),
         )
         conn.execute("UPDATE tenants SET revision=revision+1 WHERE id=%s", (self.tenant_id,))
+        self._invalidate_dependents(conn, card["id"])
         return f"event version {next_version} replaced atomically"
 
     def _resynthesize_projection(self, conn, job: dict, replacement_body: dict | None) -> str:
@@ -373,18 +505,17 @@ class MaintenanceEngine:
             (self.tenant_id, projection["id"]),
         ).fetchone()
         if erased:
-            self._retry(conn, job["id"], "version-bound rebuild required after source deletion")
-            return "retry"
-        unsafe = conn.execute(
+            return self._wait(conn, job, "version_bound_rebuild_required")
+        pending = conn.execute(
             """SELECT 1 FROM projection_supports ps JOIN event_deltas d
               ON d.tenant_id=ps.tenant_id AND d.event_id=ps.card_id
+            JOIN semantic_cards c ON c.tenant_id=ps.tenant_id AND c.id=ps.card_id
             WHERE ps.tenant_id=%s AND ps.projection_id=%s AND d.state='pending'
-              AND d.delta @> '{"requires_restructure": true}'::jsonb LIMIT 1""",
+              AND c.lifecycle IN ('active','provisional') LIMIT 1""",
             (self.tenant_id, projection["id"]),
         ).fetchone()
-        if unsafe:
-            self._retry(conn, job["id"], "unsafe support requires canonical catch-up")
-            return "retry"
+        if pending:
+            return self._wait(conn, job, "dependency_pending")
         supports = conn.execute(
             """
             SELECT c.id, c.current_version, c.lifecycle
@@ -405,16 +536,7 @@ class MaintenanceEngine:
             )
             return "no valid canonical support; known-wrong view remains excluded"
         if projection["lifecycle"] == "invalidated" and replacement_body is None:
-            conn.execute(
-                """
-                UPDATE maintenance_jobs SET state='retry',
-                  last_error='bounded semantic replacement required', available_at=now() + interval '1 second',
-                  locked_at=NULL, updated_at=now()
-                WHERE tenant_id=%s AND id=%s
-                """,
-                (self.tenant_id, job["id"]),
-            )
-            return "retry"
+            return self._wait(conn, job, "semantic_output_required")
         current = conn.execute(
             """
             SELECT * FROM projection_versions

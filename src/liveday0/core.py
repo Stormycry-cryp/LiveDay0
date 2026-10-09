@@ -324,8 +324,8 @@ class MemoryService:
                     baseline_version=event["current_version"],
                     available_after_seconds=delay_seconds,
                 )
+                self._invalidate_projections(conn, event_id)
                 if delta.get("requires_restructure"):
-                    self._invalidate_projections(conn, event_id)
                     self._hard_invalidate_snapshots(conn)
                 self._bump_revision(conn)
             return {"delta_id": row["id"] if row else None, "created": created}
@@ -419,29 +419,7 @@ class MemoryService:
                 """,
                 (self.tenant_id, card_id),
             )
-            invalidated_projection_ids = [
-                row["projection_id"]
-                for row in conn.execute(
-                    """
-                    UPDATE projections p SET lifecycle='invalidated', updated_at=now()
-                    FROM projection_supports ps
-                    WHERE p.tenant_id=%s AND ps.tenant_id=p.tenant_id
-                      AND ps.projection_id=p.id AND ps.card_id=%s AND p.lifecycle='active'
-                    RETURNING p.id AS projection_id
-                    """,
-                    (self.tenant_id, card_id),
-                )
-            ]
-            for projection_id in invalidated_projection_ids:
-                self._enqueue_job_conn(
-                    conn,
-                    job_type="projection_resynthesis",
-                    target_kind="projection",
-                    target_id=projection_id,
-                    coalesce_key=f"projection_resynthesis:{projection_id}",
-                    baseline_version=None,
-                    available_after_seconds=0,
-                )
+            invalidated_projection_ids = self._invalidate_projections(conn, card_id)
             conn.execute(
                 """
                 INSERT INTO relations(
@@ -726,7 +704,7 @@ class MemoryService:
                 (self.tenant_id, evidence_id, evidence_id, evidence_id, trace_ids, trace_ids, mention_ids, mention_ids),
             )
             conn.execute(
-                "UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL WHERE tenant_id=%s AND target_kind='evidence' AND target_id=%s",
+                "UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL, wait_reason=NULL, wait_input_fingerprint=NULL WHERE tenant_id=%s AND target_kind='evidence' AND target_id=%s",
                 (self.tenant_id, evidence_id),
             )
             for card_id in card_ids:
@@ -831,7 +809,7 @@ class MemoryService:
                 (self.tenant_id, projection_id, projection_id),
             )
             conn.execute(
-                """UPDATE maintenance_jobs SET state='dead',last_error=NULL,locked_at=NULL
+                """UPDATE maintenance_jobs SET state='dead',last_error=NULL,locked_at=NULL,wait_reason=NULL,wait_input_fingerprint=NULL
                 WHERE tenant_id=%s AND target_kind='projection' AND target_id=%s""",
                 (self.tenant_id, projection_id),
             )
@@ -852,7 +830,7 @@ class MemoryService:
         )
         conn.execute(
             """
-            UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL, updated_at=now()
+            UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL, wait_reason=NULL, wait_input_fingerprint=NULL, updated_at=now()
             WHERE tenant_id=%s AND target_kind='semantic_card' AND target_id=%s
             """,
             (self.tenant_id, card_id),
@@ -930,19 +908,8 @@ class MemoryService:
         if "evidence_id" in row:
             self._require_evidence(conn, row["evidence_id"])
 
-    def _invalidate_projections(self, conn, card_id: UUID) -> None:
-        # Unsafe inputs must exclude their dependent interpretation immediately.
-        ids = [r["id"] for r in conn.execute(
-            """UPDATE projections p SET lifecycle='invalidated', updated_at=now()
-            WHERE p.tenant_id=%s AND p.lifecycle='active' AND EXISTS(
-              SELECT 1 FROM projection_supports ps WHERE ps.tenant_id=p.tenant_id
-              AND ps.projection_id=p.id AND ps.card_id=%s) RETURNING p.id""",
-            (self.tenant_id, card_id),
-        )]
-        for projection_id in sorted(ids):
-            self._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection",
-                target_id=projection_id, coalesce_key=f"projection_resynthesis:{projection_id}",
-                baseline_version=None, available_after_seconds=0)
+    def _invalidate_projections(self, conn, card_id: UUID) -> list[UUID]:
+        return self.maintenance._invalidate_dependents(conn, card_id)
 
     def _bump_revision(self, conn) -> int:
         return conn.execute(
@@ -971,26 +938,6 @@ class MemoryService:
         baseline_version: int | None,
         available_after_seconds: int,
     ) -> UUID:
-        row = conn.execute(
-            """
-            INSERT INTO maintenance_jobs(
-              tenant_id, job_type, target_kind, target_id, coalesce_key, baseline_version,
-              available_at
-            ) VALUES (%s,%s,%s,%s,%s,%s,now() + %s * interval '1 second')
-            ON CONFLICT (tenant_id, coalesce_key)
-              WHERE state IN ('pending','running','retry')
-            DO UPDATE SET available_at=LEAST(maintenance_jobs.available_at, excluded.available_at),
-                          updated_at=now()
-            RETURNING id
-            """,
-            (
-                self.tenant_id,
-                job_type,
-                target_kind,
-                target_id,
-                coalesce_key,
-                baseline_version,
-                available_after_seconds,
-            ),
-        ).fetchone()
-        return row["id"]
+        return self.maintenance._enqueue_job_conn(conn, job_type=job_type,target_kind=target_kind,
+            target_id=target_id,coalesce_key=coalesce_key,baseline_version=baseline_version,
+            available_after_seconds=available_after_seconds)

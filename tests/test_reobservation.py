@@ -205,14 +205,14 @@ def test_intent_rls_and_composite_foreign_keys_reject_cross_tenant_sources(servi
 def test_incremental_migration_down_preserves_001_data_and_up_cannot_recover_erased_old_keys(service):
     old = forgotten(service)
     service.reobserve_deleted(old["evidence_id"], **request())
-    assert migrate_down(1) == [2]
+    assert migrate_down(2) == [3, 2]
     try:
         assert [row["version"] for row in migration_status()] == [1]
         with connect() as conn:
             assert conn.execute("SELECT to_regclass('reobservation_intents') AS t").fetchone()["t"] is None
             assert conn.execute("SELECT count(*) AS n FROM evidence").fetchone()["n"] == 2
     finally:
-        assert migrate_up() == [2]
+        assert migrate_up() == [2, 3]
     with tenant_transaction(service.tenant_id, mode="read") as conn:
         marker = conn.execute("SELECT source_identity_digest FROM deletion_markers WHERE object_kind='evidence'").fetchone()
         assert marker["source_identity_digest"] is None  # No deleted key/body is recovered to invent a backfill.

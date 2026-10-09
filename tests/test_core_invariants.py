@@ -117,7 +117,7 @@ def test_polluted_projection_needs_validated_bounded_replacement(service):
         expected_version=1,
     )
     retry = service.maintenance.run_ready(limit=1)
-    assert retry[0]["state"] == "retry"
+    assert retry[0]["state"] == "waiting"
     assert not service.recall("工作状态 辞职")["layers"]["current_state"]
     service.maintenance.make_retries_ready()
     success = service.maintenance.run_ready(
@@ -318,9 +318,9 @@ def test_only_postgresql_and_relational_adjacency_are_used():
 
 
 def test_migration_up_down_up_is_repeatable():
-    assert [row["version"] for row in migration_status()] == [1, 2]
-    assert migrate_down(2) == [2, 1]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3]
+    assert migrate_down(3) == [3, 2, 1]
     with connect() as conn:
         assert conn.execute("SELECT to_regclass('public.semantic_cards') AS name").fetchone()["name"] is None
-    assert migrate_up() == [1, 2]
-    assert [row["version"] for row in migration_status()] == [1, 2]
+    assert migrate_up() == [1, 2, 3]
+    assert [row["version"] for row in migration_status()] == [1, 2, 3]

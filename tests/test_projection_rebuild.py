@@ -90,7 +90,7 @@ def test_version_bound_rebuild_restores_same_id_from_remaining_support_and_keeps
         service._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection", target_id=pid,
             coalesce_key=f"projection_resynthesis:{pid}", baseline_version=3, available_after_seconds=0)
     retry = service.maintenance.run_ready(limit=1, projection_outputs={pid: {"summary": "unbound old output"}})
-    assert retry[0]["state"] == "retry"
+    assert retry[0]["state"] == "waiting"
     assert "unbound old output" not in flatten_context(service.recall("surviving-B"))
 
 
