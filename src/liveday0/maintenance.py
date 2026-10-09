@@ -7,6 +7,7 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
+from liveday0.exceptions import NotFound
 
 
 class MaintenanceEngine:
@@ -17,6 +18,12 @@ class MaintenanceEngine:
 
     def enqueue_candidate_discovery(self, evidence_id: UUID) -> UUID:
         with tenant_transaction(self.tenant_id) as conn:
+            source = conn.execute("SELECT status FROM evidence WHERE tenant_id=%s AND id=%s",
+                                  (self.tenant_id, evidence_id)).fetchone()
+            if not source:
+                raise NotFound("evidence not found in tenant")
+            if source["status"] == "deleted":
+                raise ValueError("cannot schedule deleted evidence")
             row = conn.execute(
                 """
                 INSERT INTO maintenance_jobs(
@@ -240,6 +247,24 @@ class MaintenanceEngine:
         ).fetchone()
         if not projection or projection["lifecycle"] == "deleted":
             return "target no longer valid"
+        erased = conn.execute(
+            """SELECT 1 FROM deletion_markers WHERE tenant_id=%s
+            AND object_kind='projection_content' AND object_id=%s""",
+            (self.tenant_id, projection["id"]),
+        ).fetchone()
+        if erased:
+            self._retry(conn, job["id"], "version-bound rebuild required after source deletion")
+            return "retry"
+        unsafe = conn.execute(
+            """SELECT 1 FROM projection_supports ps JOIN event_deltas d
+              ON d.tenant_id=ps.tenant_id AND d.event_id=ps.card_id
+            WHERE ps.tenant_id=%s AND ps.projection_id=%s AND d.state='pending'
+              AND d.delta @> '{"requires_restructure": true}'::jsonb LIMIT 1""",
+            (self.tenant_id, projection["id"]),
+        ).fetchone()
+        if unsafe:
+            self._retry(conn, job["id"], "unsafe support requires canonical catch-up")
+            return "retry"
         supports = conn.execute(
             """
             SELECT c.id, c.current_version, c.lifecycle

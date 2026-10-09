@@ -31,7 +31,7 @@ class MemoryService:
         self.recall_compiler = RecallCompiler(tenant_id)
 
     def ensure_tenant(self) -> UUID:
-        with tenant_transaction(self.tenant_id) as conn:
+        with tenant_transaction(self.tenant_id, mode="bootstrap") as conn:
             conn.execute(
                 "INSERT INTO tenants(id) VALUES (%s) ON CONFLICT (id) DO NOTHING",
                 (self.tenant_id,),
@@ -52,6 +52,8 @@ class MemoryService:
             raise ValueError("v1 pgvector embeddings must contain exactly 8 dimensions")
         semantics = list(semantics)
         for semantic in semantics:
+            if semantic.lifecycle not in {"active", "provisional", "closed"}:
+                raise ValueError("new semantics require a usable lifecycle")
             missing = CARD_REQUIRED_FIELDS[semantic.card_type] - semantic.body.keys()
             if missing:
                 raise ValueError(f"{semantic.card_type} missing required fields: {sorted(missing)}")
@@ -190,9 +192,12 @@ class MemoryService:
     ) -> dict[str, Any]:
         if not delta:
             raise ValueError("delta cannot be empty")
+        if "requires_restructure" in delta and not isinstance(delta["requires_restructure"], bool):
+            raise ValueError("requires_restructure must be a boolean")
         observed = self.observe(evidence)
         with tenant_transaction(self.tenant_id) as conn:
             event = self._get_card(conn, event_id, for_update=True)
+            self._require_evidence(conn, observed["evidence_id"])
             if event["card_type"] != "event":
                 raise ValueError("event deltas can only target events")
             row = conn.execute(
@@ -231,11 +236,14 @@ class MemoryService:
                     baseline_version=event["current_version"],
                     available_after_seconds=delay_seconds,
                 )
+                if delta.get("requires_restructure"):
+                    self._invalidate_projections(conn, event_id)
+                    self._hard_invalidate_snapshots(conn)
                 self._bump_revision(conn)
             return {"delta_id": row["id"] if row else None, "created": created}
 
     def effective_event(self, event_id: UUID) -> dict[str, Any]:
-        with tenant_transaction(self.tenant_id) as conn:
+        with tenant_transaction(self.tenant_id, mode="read") as conn:
             event = self._get_card(conn, event_id)
             version = conn.execute(
                 """
@@ -278,9 +286,12 @@ class MemoryService:
         expected_version: int,
         lifecycle: str = "active",
     ) -> dict[str, Any]:
+        if lifecycle not in {"active", "provisional", "closed"}:
+            raise ValueError("correction cannot bypass the deletion lifecycle")
         correction_result = self.observe(correction)
         with tenant_transaction(self.tenant_id) as conn:
             card = self._get_card(conn, card_id, for_update=True)
+            self._require_evidence(conn, correction_result["evidence_id"])
             if card["current_version"] != expected_version:
                 raise VersionConflict(
                     f"expected version {expected_version}, found {card['current_version']}"
@@ -391,6 +402,7 @@ class MemoryService:
     ) -> UUID:
         observed = self.observe(evidence)
         with tenant_transaction(self.tenant_id) as conn:
+            self._require_evidence(conn, observed["evidence_id"])
             mention_id = conn.execute(
                 """
                 INSERT INTO mentions(tenant_id, evidence_id, surface_text)
@@ -421,6 +433,13 @@ class MemoryService:
     def bind_mention(self, mention_id: UUID, card_id: UUID) -> None:
         with tenant_transaction(self.tenant_id) as conn:
             self._get_card(conn, card_id)
+            mention = conn.execute(
+                "SELECT evidence_id FROM mentions WHERE tenant_id=%s AND id=%s AND state='unbound'",
+                (self.tenant_id, mention_id),
+            ).fetchone()
+            if not mention:
+                raise NotFound("unbound mention not found")
+            self._require_evidence(conn, mention["evidence_id"])
             row = conn.execute(
                 """
                 UPDATE mentions SET state='bound', bound_card_id=%s
@@ -430,6 +449,7 @@ class MemoryService:
             ).fetchone()
             if not row:
                 raise NotFound("unbound mention not found")
+            self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)
 
     def unbind_mention(self, mention_id: UUID) -> None:
@@ -443,6 +463,7 @@ class MemoryService:
             ).fetchone()
             if not row:
                 raise NotFound("bound mention not found")
+            self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)
 
     def materialize_projection(
@@ -458,10 +479,22 @@ class MemoryService:
         if not support_card_ids:
             raise ValueError("derived projections require canonical support")
         with tenant_transaction(self.tenant_id) as conn:
-            for card_id in support_card_ids:
+            for card_id in sorted(set(support_card_ids)):
                 card = self._get_card(conn, card_id)
                 if card["lifecycle"] not in {"active", "provisional"}:
                     raise ValueError("projection support must be currently valid")
+            unsafe = conn.execute(
+                """
+                SELECT EXISTS (
+                  SELECT 1 FROM event_deltas
+                  WHERE tenant_id=%s AND event_id=ANY(%s) AND state='pending'
+                    AND delta @> '{"requires_restructure": true}'::jsonb
+                ) AS unsafe
+                """,
+                (self.tenant_id, sorted(set(support_card_ids))),
+            ).fetchone()["unsafe"]
+            if unsafe:
+                raise ValueError("unsafe projection support requires canonical catch-up")
             projection_id = conn.execute(
                 """
                 INSERT INTO projections(
@@ -514,10 +547,10 @@ class MemoryService:
         source_evidence_id: UUID | None = None,
     ) -> UUID:
         with tenant_transaction(self.tenant_id) as conn:
-            if from_kind == "semantic_card":
-                self._get_card(conn, from_id)
-            if to_kind == "semantic_card":
-                self._get_card(conn, to_id)
+            self._require_endpoint(conn, from_kind, from_id)
+            self._require_endpoint(conn, to_kind, to_id)
+            if source_evidence_id is not None:
+                self._require_evidence(conn, source_evidence_id)
             row = conn.execute(
                 """
                 INSERT INTO relations(
@@ -544,15 +577,17 @@ class MemoryService:
     def delete_evidence(self, evidence_id: UUID, *, reason_code: str = "user_request") -> None:
         with tenant_transaction(self.tenant_id) as conn:
             evidence = conn.execute(
-                "SELECT id FROM evidence WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                "SELECT id, status FROM evidence WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, evidence_id),
             ).fetchone()
             if not evidence:
                 raise NotFound("evidence not found")
+            if evidence["status"] == "deleted":
+                return
             card_ids = [
                 row["card_id"]
                 for row in conn.execute(
-                    "SELECT card_id FROM card_sources WHERE tenant_id=%s AND evidence_id=%s",
+                    "SELECT DISTINCT card_id FROM card_sources WHERE tenant_id=%s AND evidence_id=%s ORDER BY card_id",
                     (self.tenant_id, evidence_id),
                 )
             ]
@@ -565,6 +600,18 @@ class MemoryService:
                 """,
                 (self.tenant_id, evidence_id),
             )
+            if conn.execute(
+                """SELECT EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema='public' AND table_name='evidence' AND column_name='embedding') AS value"""
+            ).fetchone()["value"]:
+                conn.execute("UPDATE evidence SET embedding=NULL WHERE tenant_id=%s AND id=%s", (self.tenant_id, evidence_id))
+            trace_ids = [r["id"] for r in conn.execute(
+                "SELECT id FROM life_traces WHERE tenant_id=%s AND evidence_id=%s", (self.tenant_id, evidence_id)
+            )]
+            mention_ids = [r["id"] for r in conn.execute(
+                "SELECT id FROM mentions WHERE tenant_id=%s AND evidence_id=%s", (self.tenant_id, evidence_id)
+            )]
+            conn.execute("DELETE FROM mention_candidates WHERE tenant_id=%s AND mention_id=ANY(%s)", (self.tenant_id, mention_ids))
             conn.execute(
                 """
                 UPDATE life_traces SET observation='', observation_boundary='', lifecycle='deleted'
@@ -573,7 +620,7 @@ class MemoryService:
                 (self.tenant_id, evidence_id),
             )
             conn.execute(
-                "UPDATE mentions SET surface_text='', state='invalidated' WHERE tenant_id=%s AND evidence_id=%s",
+                "UPDATE mentions SET surface_text='', state='invalidated', bound_card_id=NULL WHERE tenant_id=%s AND evidence_id=%s",
                 (self.tenant_id, evidence_id),
             )
             conn.execute(
@@ -583,9 +630,16 @@ class MemoryService:
             conn.execute(
                 """
                 UPDATE relations SET annotation=NULL, lifecycle='deleted'
-                WHERE tenant_id=%s AND (source_evidence_id=%s OR (from_kind='evidence' AND from_id=%s))
+                WHERE tenant_id=%s AND (source_evidence_id=%s
+                  OR (from_kind='evidence' AND from_id=%s) OR (to_kind='evidence' AND to_id=%s)
+                  OR (from_kind='life_trace' AND from_id=ANY(%s)) OR (to_kind='life_trace' AND to_id=ANY(%s))
+                  OR (from_kind='mention' AND from_id=ANY(%s)) OR (to_kind='mention' AND to_id=ANY(%s)))
                 """,
-                (self.tenant_id, evidence_id, evidence_id),
+                (self.tenant_id, evidence_id, evidence_id, evidence_id, trace_ids, trace_ids, mention_ids, mention_ids),
+            )
+            conn.execute(
+                "UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL WHERE tenant_id=%s AND target_kind='evidence' AND target_id=%s",
+                (self.tenant_id, evidence_id),
             )
             for card_id in card_ids:
                 self._delete_card_conn(conn, card_id, reason_code="source_deleted")
@@ -601,19 +655,25 @@ class MemoryService:
 
     def delete_card(self, card_id: UUID, *, reason_code: str = "user_request") -> None:
         with tenant_transaction(self.tenant_id) as conn:
-            self._get_card(conn, card_id, for_update=True)
+            card = self._get_card(conn, card_id, for_update=True, allow_inactive=True)
+            if card["lifecycle"] == "deleted":
+                return
             self._delete_card_conn(conn, card_id, reason_code=reason_code)
             self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)
 
     def _delete_card_conn(self, conn, card_id: UUID, *, reason_code: str) -> None:
+        card = self._get_card(conn, card_id, allow_inactive=True)
+        if card["lifecycle"] == "deleted":
+            return
+        next_version = card["current_version"] + 1
         conn.execute(
             """
             UPDATE semantic_cards SET canonical_key='deleted:' || id::text,
-              lifecycle='deleted', epistemic_state='superseded', updated_at=now()
+              lifecycle='deleted', epistemic_state='superseded', current_version=%s, updated_at=now()
             WHERE tenant_id=%s AND id=%s
             """,
-            (self.tenant_id, card_id),
+            (next_version, self.tenant_id, card_id),
         )
         conn.execute(
             """
@@ -622,29 +682,69 @@ class MemoryService:
             """,
             (self.tenant_id, card_id),
         )
+        conn.execute(
+            """INSERT INTO semantic_card_versions(
+              tenant_id,card_id,version,body,lifecycle,epistemic_state,valid_at
+            ) VALUES (%s,%s,%s,'{}'::jsonb,'deleted','superseded',%s)""",
+            (self.tenant_id, card_id, next_version, card["valid_at"]),
+        )
         projection_ids = [
             row["projection_id"]
             for row in conn.execute(
-                "SELECT projection_id FROM projection_supports WHERE tenant_id=%s AND card_id=%s",
+                "SELECT DISTINCT projection_id FROM projection_supports WHERE tenant_id=%s AND card_id=%s ORDER BY projection_id",
                 (self.tenant_id, card_id),
             )
         ]
-        if projection_ids:
+        for projection_id in projection_ids:
+            remaining = conn.execute(
+                """SELECT EXISTS(
+                  SELECT 1 FROM projection_supports ps JOIN semantic_cards c
+                    ON c.tenant_id=ps.tenant_id AND c.id=ps.card_id
+                  WHERE ps.tenant_id=%s AND ps.projection_id=%s AND ps.support_role='support'
+                    AND c.lifecycle IN ('active','provisional')
+                ) AS value""", (self.tenant_id, projection_id)
+            ).fetchone()["value"]
+            state = "invalidated" if remaining else "deleted"
             conn.execute(
                 """
-                UPDATE projections SET projection_key='deleted:' || id::text, scope='deleted',
-                  lifecycle='deleted', updated_at=now()
-                WHERE tenant_id=%s AND id = ANY(%s)
+                UPDATE projections SET projection_key=CASE WHEN %s THEN 'rebuild:' || id::text ELSE 'deleted:' || id::text END,
+                  scope='', lifecycle=%s, current_version=current_version+1, updated_at=now()
+                WHERE tenant_id=%s AND id=%s
                 """,
-                (self.tenant_id, projection_ids),
+                (remaining, state, self.tenant_id, projection_id),
             )
             conn.execute(
                 """
                 UPDATE projection_versions SET body='{}'::jsonb, lifecycle='deleted'
-                WHERE tenant_id=%s AND projection_id = ANY(%s)
+                WHERE tenant_id=%s AND projection_id=%s
                 """,
-                (self.tenant_id, projection_ids),
+                (self.tenant_id, projection_id),
             )
+            conn.execute(
+                """INSERT INTO projection_versions(tenant_id,projection_id,version,body,lifecycle,epistemic_state)
+                SELECT tenant_id,id,current_version,'{}'::jsonb,lifecycle,epistemic_state FROM projections
+                WHERE tenant_id=%s AND id=%s""", (self.tenant_id, projection_id)
+            )
+            # Records content erasure, not permission to revive this identity.
+            conn.execute(
+                """INSERT INTO deletion_markers(tenant_id,object_kind,object_id,reason_code)
+                VALUES (%s,'projection_content',%s,'source_deleted') ON CONFLICT DO NOTHING""",
+                (self.tenant_id, projection_id),
+            )
+            conn.execute(
+                """UPDATE relations SET annotation=NULL,lifecycle='deleted' WHERE tenant_id=%s
+                AND ((from_kind='projection' AND from_id=%s) OR (to_kind='projection' AND to_id=%s))""",
+                (self.tenant_id, projection_id, projection_id),
+            )
+            conn.execute(
+                """UPDATE maintenance_jobs SET state='dead',last_error=NULL,locked_at=NULL
+                WHERE tenant_id=%s AND target_kind='projection' AND target_id=%s""",
+                (self.tenant_id, projection_id),
+            )
+            if remaining:
+                self._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection",
+                    target_id=projection_id, coalesce_key=f"projection_resynthesis:{projection_id}",
+                    baseline_version=None, available_after_seconds=0)
         conn.execute(
             "UPDATE event_deltas SET delta='{}'::jsonb, state='invalidated' WHERE tenant_id=%s AND event_id=%s",
             (self.tenant_id, card_id),
@@ -658,9 +758,14 @@ class MemoryService:
         )
         conn.execute(
             """
-            UPDATE maintenance_jobs SET state='dead', last_error=NULL, updated_at=now()
-            WHERE tenant_id=%s AND target_id=%s AND state IN ('pending','running','retry')
+            UPDATE maintenance_jobs SET state='dead', last_error=NULL, locked_at=NULL, updated_at=now()
+            WHERE tenant_id=%s AND target_kind='semantic_card' AND target_id=%s
             """,
+            (self.tenant_id, card_id),
+        )
+        conn.execute("DELETE FROM mention_candidates WHERE tenant_id=%s AND candidate_card_id=%s", (self.tenant_id, card_id))
+        conn.execute(
+            "UPDATE mentions SET bound_card_id=NULL, state='unbound' WHERE tenant_id=%s AND bound_card_id=%s AND state='bound'",
             (self.tenant_id, card_id),
         )
         conn.execute(
@@ -688,7 +793,7 @@ class MemoryService:
     def expand_snapshot(self, snapshot_id: UUID, item_id: UUID) -> dict[str, Any]:
         return self.recall_compiler.expand(snapshot_id, item_id)
 
-    def _get_card(self, conn, card_id: UUID, *, for_update: bool = False) -> dict[str, Any]:
+    def _get_card(self, conn, card_id: UUID, *, for_update: bool = False, allow_inactive: bool = False) -> dict[str, Any]:
         suffix = " FOR UPDATE" if for_update else ""
         row = conn.execute(
             f"SELECT * FROM semantic_cards WHERE tenant_id=%s AND id=%s{suffix}",
@@ -696,7 +801,54 @@ class MemoryService:
         ).fetchone()
         if not row:
             raise NotFound("semantic card not found in tenant")
+        if not allow_inactive and row["lifecycle"] in {"deleted", "invalidated"}:
+            raise ValueError("semantic card is no longer usable")
         return row
+
+    def _require_evidence(self, conn, evidence_id: UUID) -> dict[str, Any]:
+        row = conn.execute("SELECT id,status,version FROM evidence WHERE tenant_id=%s AND id=%s",
+                           (self.tenant_id, evidence_id)).fetchone()
+        if not row:
+            raise NotFound("evidence not found in tenant")
+        if row["status"] == "deleted":
+            raise ValueError("source evidence was deleted")
+        return row
+
+    def _require_endpoint(self, conn, kind: str, object_id: UUID) -> None:
+        if kind == "semantic_card":
+            self._get_card(conn, object_id)
+            return
+        if kind == "evidence":
+            self._require_evidence(conn, object_id)
+            return
+        tables = {"life_trace": ("life_traces", "lifecycle", {"active", "absorbed"}),
+                  "mention": ("mentions", "state", {"unbound", "bound"}),
+                  "projection": ("projections", "lifecycle", {"active", "dormant"})}
+        if kind not in tables:
+            raise ValueError("unsupported relation endpoint kind")
+        table, field, usable = tables[kind]
+        row = conn.execute(f"SELECT * FROM {table} WHERE tenant_id=%s AND id=%s",
+                           (self.tenant_id, object_id)).fetchone()
+        if not row:
+            raise NotFound("relation endpoint not found in tenant")
+        if row[field] not in usable:
+            raise ValueError("relation endpoint is no longer usable")
+        if "evidence_id" in row:
+            self._require_evidence(conn, row["evidence_id"])
+
+    def _invalidate_projections(self, conn, card_id: UUID) -> None:
+        # Unsafe inputs must exclude their dependent interpretation immediately.
+        ids = [r["id"] for r in conn.execute(
+            """UPDATE projections p SET lifecycle='invalidated', updated_at=now()
+            WHERE p.tenant_id=%s AND p.lifecycle='active' AND EXISTS(
+              SELECT 1 FROM projection_supports ps WHERE ps.tenant_id=p.tenant_id
+              AND ps.projection_id=p.id AND ps.card_id=%s) RETURNING p.id""",
+            (self.tenant_id, card_id),
+        )]
+        for projection_id in sorted(ids):
+            self._enqueue_job_conn(conn, job_type="projection_resynthesis", target_kind="projection",
+                target_id=projection_id, coalesce_key=f"projection_resynthesis:{projection_id}",
+                baseline_version=None, available_after_seconds=0)
 
     def _bump_revision(self, conn) -> int:
         return conn.execute(
@@ -707,8 +859,9 @@ class MemoryService:
     def _hard_invalidate_snapshots(self, conn) -> None:
         conn.execute(
             """
-            UPDATE recall_snapshots SET state='invalidated', invalidated_at=now()
-            WHERE tenant_id=%s AND state='active'
+            UPDATE recall_snapshots SET state='invalidated', invalidated_at=coalesce(invalidated_at,now()),
+              context='{}'::jsonb, expansion_store='{}'::jsonb, referenced_ids='{}', degraded_reasons='{}'
+            WHERE tenant_id=%s
             """,
             (self.tenant_id,),
         )

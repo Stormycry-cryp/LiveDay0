@@ -46,7 +46,7 @@ class RecallCompiler:
         current_evidence_ids: list[UUID],
         options: RecallOptions,
     ) -> dict[str, Any]:
-        with tenant_transaction(self.tenant_id, isolation_level="REPEATABLE READ") as conn:
+        with tenant_transaction(self.tenant_id, mode="read") as conn:
             tenant = conn.execute(
                 "SELECT revision FROM tenants WHERE id=%s",
                 (self.tenant_id,),
@@ -54,6 +54,17 @@ class RecallCompiler:
             if not tenant:
                 raise NotFound("tenant not found")
             degraded: list[str] = []
+            unsafe_ids = {
+                row["event_id"] for row in conn.execute(
+                    """SELECT DISTINCT d.event_id FROM event_deltas d
+                    JOIN semantic_cards c ON c.tenant_id=d.tenant_id AND c.id=d.event_id
+                    WHERE d.tenant_id=%s AND d.state='pending'
+                      AND d.delta @> '{"requires_restructure": true}'::jsonb
+                      AND c.lifecycle IN ('active','provisional')""", (self.tenant_id,)
+                )
+            }
+            if unsafe_ids:
+                degraded.append("unsafe_events_not_caught_up")
             if options.simulate_vector_timeout:
                 degraded.append("vector_candidate_timeout")
 
@@ -74,6 +85,8 @@ class RecallCompiler:
             source_map = self._source_map(conn, [row["id"] for row in cards])
             scored: list[tuple[float, dict]] = []
             for row in cards:
+                if row["id"] in unsafe_ids:
+                    continue
                 score = self._relevance(query, row["body"])
                 if row["id"] in fts_card_ids:
                     score += 2.0
@@ -98,7 +111,7 @@ class RecallCompiler:
                     source_map.get(row["id"], []),
                 )
 
-            projections = self._projection_cards(conn, query, set(cards_by_id), options)
+            projections = self._projection_cards(conn, query, set(cards_by_id), options, unsafe_ids)
             mentions = self._mention_cards(conn, query, options)
             current_evidence = self._evidence_cards(conn, current_evidence_ids)
             trace_summary = self._trace_summary(conn, list(cards_by_id))
@@ -204,7 +217,7 @@ class RecallCompiler:
             return self._json_safe(context)
 
     def expand(self, snapshot_id: UUID, item_id: UUID) -> dict[str, Any]:
-        with tenant_transaction(self.tenant_id) as conn:
+        with tenant_transaction(self.tenant_id, mode="read") as conn:
             snapshot = conn.execute(
                 """
                 SELECT state, expansion_store FROM recall_snapshots
@@ -330,6 +343,7 @@ class RecallCompiler:
         query: str,
         selected_card_ids: set[UUID],
         options: RecallOptions,
+        unsafe_ids: set[UUID],
     ) -> list[dict[str, Any]]:
         rows = conn.execute(
             """
@@ -351,6 +365,8 @@ class RecallCompiler:
         family_counts: dict[str, int] = {}
         for row in rows:
             support_ids = set(row["support_ids"] or [])
+            if support_ids & unsafe_ids:
+                continue
             if not (support_ids & selected_card_ids) and self._relevance(query, row["body"]) <= 0:
                 continue
             family = row["projection_type"]
