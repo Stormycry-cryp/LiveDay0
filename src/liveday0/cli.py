@@ -44,6 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="liveday0")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    local = sub.add_parser("local", help="trusted OS session for the bounded synthetic prototype")
+    local.add_argument("--demo", action="store_true", help="run fixed synthetic inputs with fixture consent")
+
     migration = sub.add_parser("migrate", help="apply, revert, or inspect SQL migrations")
     migration.add_argument("action", choices=("up", "down", "status"))
     migration.add_argument("--steps", type=int, default=1)
@@ -85,6 +88,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    if args.command == "local":
+        from liveday0.local_console import main as local_main
+        local_main(demo=args.demo)
+        return
     if args.command == "migrate":
         if args.action == "up":
             result = migrate_up()

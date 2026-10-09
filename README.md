@@ -109,6 +109,12 @@ uv run liveday0 migrate status
 
 也可以复制 [`.env.example`](./.env.example)，再设置本地环境变量。不要提交 `.env`。
 
+### 合成生活入口
+
+配置并迁移好合成测试数据库后，可运行 `uv run liveday0 local --demo` 查看保存、查询、纠正、删除与明确恢复闭环，或用 `uv run liveday0 local` 进入本地交互终端。入口从本机 OS 登录身份建立范围，不接受请求传 tenant；它只匹配三句固定合成文字，批准回调在 demo 中也是测试夹具。
+
+运行方式、具体命令、来源擦除和身份限制见 [合成本地入口](./docs/v1-design/local-synthetic-entry.md)。它不代表通用自然语言提取或服务器鉴权已完成。
+
 ### 写入证据并召回
 
 先建立一个本地测试租户。

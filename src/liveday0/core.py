@@ -11,6 +11,7 @@ from psycopg.types.json import Jsonb
 
 from liveday0.config import event_delta_soft_limit, event_quiet_seconds
 from liveday0.db import tenant_transaction
+from liveday0.deletion import read_deletion, check_deletion_conn
 from liveday0.exceptions import DeletedSource, IdempotencyConflict, InterpretationRevoked, NotFound, VersionConflict
 from liveday0.interpretation import InterpretationEngine, observation_receipt, revoke_source, sources_for_card
 from liveday0.maintenance import MaintenanceEngine
@@ -643,8 +644,13 @@ class MemoryService:
             self._bump_revision(conn)
             return row["id"]
 
-    def delete_evidence(self, evidence_id: UUID, *, reason_code: str = "user_request") -> None:
+    def read_deletion(self, kind: str, target_id: UUID):
+        return read_deletion(self.tenant_id, kind, target_id)
+
+    def delete_evidence(self, evidence_id: UUID, *, reason_code: str = "user_request", expected_deletion=None) -> None:
         with tenant_transaction(self.tenant_id) as conn:
+            if expected_deletion is not None:
+                check_deletion_conn(conn, self.tenant_id, "evidence", evidence_id, expected_deletion)
             evidence = conn.execute(
                 "SELECT id, status, idempotency_key FROM evidence WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, evidence_id),
@@ -732,8 +738,10 @@ class MemoryService:
             self._hard_invalidate_snapshots(conn)
             self._bump_revision(conn)
 
-    def delete_card(self, card_id: UUID, *, reason_code: str = "user_request") -> None:
+    def delete_card(self, card_id: UUID, *, reason_code: str = "user_request", expected_deletion=None) -> None:
         with tenant_transaction(self.tenant_id) as conn:
+            if expected_deletion is not None:
+                check_deletion_conn(conn, self.tenant_id, "card", card_id, expected_deletion)
             card = self._get_card(conn, card_id, for_update=True, allow_inactive=True)
             self._delete_card_conn(conn, card_id, reason_code=reason_code)
             if card["lifecycle"] == "deleted":

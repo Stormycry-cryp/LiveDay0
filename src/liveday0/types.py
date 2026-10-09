@@ -110,3 +110,17 @@ class ExplicitSaveAuthorization:
     @property
     def fingerprint(self) -> str:
         return fingerprint(self.canonical_request)
+
+
+@dataclass(frozen=True)
+class DeletionInput:
+    """Ephemeral exact deletion scope, not an authorization token."""
+
+    tenant_id: UUID
+    kind: Literal["card", "evidence"]
+    target_id: UUID
+    canonical_input: str = field(repr=False)
+
+    @property
+    def payload(self) -> dict[str, Any]:
+        return json.loads(self.canonical_input)
