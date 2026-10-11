@@ -1,19 +1,21 @@
 {
-  "version": 1,
+  "version": 2,
   "base_manifest_sha256": "d246c704dc56abed4dc9164d23850069cb2e12733d77f6dd83fe7967ef9dd217",
   "model": "glm-5.3-flash",
   "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
   "status": "offline_candidate_not_execution_authorization",
   "files": {
-    "benchmarks/semantic_quality_preflight_v1/capture.py": "098c554cb00a6a4158b0bde56d34d47ad5f1183ed669c397f084ce3db2db7dda",
+    "benchmarks/semantic_quality_preflight_v1/capture.py": "c61f756e6057cc5282dc95d5331eac3c7a883909214fb8953d74184024203db2",
     "benchmarks/semantic_quality_preflight_v1/test_capture.py": "8bf381e1213a18be4d706f4713c5f34fddaf5c6f1a54e2e98cb46139fcaed55a",
     "benchmarks/semantic_quality_preflight_v1/manifest.json": "d246c704dc56abed4dc9164d23850069cb2e12733d77f6dd83fe7967ef9dd217",
-    "benchmarks/semantic_quality_preflight_v1/README-CAPTURE.md": "5876be72942156fa36f69e731df580265c340e6e62751c940b11f0107d417508",
-    "benchmarks/semantic_quality_preflight_v1/README.md": "5e4de2c3182ae91fd182a78ae9b4022bd1ba3d1858c0ee2ae49c0042bac1b885",
-    "docs/v1-design/user-capability-status.md": "a917f420472899bc8fa98197358a8fd4088e290e349224f7fe84158db86192e4"
+    "benchmarks/semantic_quality_preflight_v1/README-CAPTURE.md": "304a040901b17ec4ab299ae9c0f067f1d97505701f78e4cf9ce4a00857005946",
+    "benchmarks/semantic_quality_preflight_v1/README.md": "febaf2392ba3198ecadd4ae4ddbc8e029fd32e553560d5c4c089c0ed64919cc4",
+    "docs/v1-design/user-capability-status.md": "49e2402c16e37e6d456f2ce780e66cb19ea7b484848919a83be3ebca59598e1e",
+    "benchmarks/semantic_quality_preflight_v1/test_credentials.py": "190c89f0a2cf780edaeff216596c7b15846477d78ab801eb7d2cb6e826405da8"
   },
   "attempt_limit": 12,
   "retry_limit": 0,
   "reserve_per_attempt_cny": "1.2058624",
-  "max_authorizable_local_reservation_cny": "15"
+  "max_authorizable_local_reservation_cny": "15",
+  "credential_mode": "human_tty_explicit_private_file_or_hidden_input"
 }

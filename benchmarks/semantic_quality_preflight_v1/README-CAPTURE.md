@@ -1,8 +1,8 @@
-# 固定评测捕获入口 v1
+# 固定评测捕获入口 v2（私有凭据文件）
 
 本入口只补现有12例评测的执行期缺口。当前只验过离线/127.0.0.1假服务，**真实请求0次，实际语义质量未执行**。模型、既有prompt、12例、oracle及原`manifest.json`完全不变。旧once runner、已消耗授权、旧尝试标记和旧结果不读不改。
 
-`capture.py`是一份可审的独立脚本，复用现有GLMHTTP/adapter/validator/gate，原子exclusive文件及固定摘要。它不接产品CLI/数据库，不做通用provider框架，不读环境变量、dotenv或任何凭据文件。真实命令供以后新授权的**用户终端**运行，当前Agent不得进入execute路径。
+`capture.py`是一份可审的独立脚本，复用现有GLMHTTP/adapter/validator/gate，原子exclusive文件及固定摘要。它不接产品CLI/数据库，不做通用provider框架，不读环境变量、dotenv或Keychain；新增显式选择的私有JSON文件，只由用户以后在终端手动execute时读取。真实命令供以后新授权的**用户终端**运行，当前Agent不得进入execute路径。
 
 ## 版本与执行门
 
@@ -15,7 +15,7 @@ python3 -I -S -B benchmarks/semantic_quality_preflight_v1/capture.py preview
 python3 -I -S -B benchmarks/semantic_quality_preflight_v1/test_capture.py
 ```
 
-真实开门分开检查：独立源码审查、新用户授权、新鲜官方周额度、可信操作者核实的官方价格；四者绑定最终capture manifest SHA、国内`glm-5.3-flash`和`https://open.bigmodel.cn/api/paas/v4/chat/completions`。审阅文件不能授予请求权限，JSON是可信操作者的流程记录，不是不可伪造安全票据。**本轮不创建任何真实审阅/执行授权文件。**
+真实开门分开检查：独立源码审查、新用户授权、新鲜官方周额度、可信操作者核实的官方价格；四者绑定最终capture manifest SHA、国内`glm-5.3-flash`和`https://open.bigmodel.cn/api/paas/v4/chat/completions`。审阅文件不能授予请求权限，JSON是可信操作者的流程记录，不是不可伪造安全票据。代码审阅记录只绑定最终版本；既有用户授权范围不增加，当前没有执行真实请求。
 
 供未来操作者填写的无秘密字段（不是已有授权）：
 
@@ -34,13 +34,36 @@ python3 -I -S -B benchmarks/semantic_quality_preflight_v1/test_capture.py
 
 人工`stop`可以在另一进程等待认证时写终止标记，预约及实际transport前均再查STOP。已越过最后发送检查、正在执行的请求无法撤回；其回执仍保存，后续请求永久禁止，不把取消当退款。缺前置文件、quota/price/冻结校验失败也给已启动的真实账本持久STOP。
 
-认证在所有前置门通过后，仅由用户终端隐藏输入；非TTY/隐藏输入不可用即拒绝，无参数/env/key文件输入。Agent不替用户输入、读取、搬运或显示密钥。密钥只暂用于固定HTTPS header，永不进入ledger、模型payload、子进程、错误输出或结果。响应只保留validator实际使用的model、三项usage、finish_reason、assistant role/content；headers、reasoning、未知字段和异常正文都不保存。失败只保存静态状态，合法但语义错误的候选内容仍保留供人工判断。
+认证在所有前置门通过后，仅由用户终端触发；非TTY即拒绝。默认隐藏输入；显式加`--credentials-file /绝对路径/credentials.json`才读用户已启用的私有文件，参数只携带路径，不携带密钥。没有env、Keychain、自动探测或失败回退。Agent不替用户输入、读取、搬运或显示密钥。密钥只暂用于固定HTTPS header，永不进入ledger、模型payload、子进程、错误输出或结果。响应只保留validator实际使用的model、三项usage、finish_reason、assistant role/content；headers、reasoning、未知字段和异常正文都不保存。失败只保存静态状态，合法但语义错误的候选内容仍保留供人工判断。
+
+## 一次填写，随后由用户手动使用
+
+本机建议位置为`/Users/chenyunzhe/Library/Application Support/LiveDay0/credentials.json`，在仓库之外。Agent只exclusive创建空模板，不读取用户填写后的内容，也不保存或转移密钥。
+
+```json
+{"enabled": false, "api_key": ""}
+```
+
+用户在本机编辑器亲自填入`api_key`，将`enabled`改为`true`并保存。保留父目录0700、文件0600；有些编辑器替换文件时会改权限，需用户自行确认。不要把文件或密钥发到聊天、提交Git、放入评测证据或shell参数。
+
+程序逐级以dirfd和`O_NOFOLLOW`打开绝对路径，拒绝父路径符号链接、`..`、文件符号/硬链接及非普通文件。立即父目录和文件必须属于当前有效UID，权限精确0700/0600，文件最多4096 bytes。JSON只允许`enabled`和`api_key`两字段，无重复键、非有限常量或额外字段；enabled必须为布尔true，key为1–512个ASCII可打印非空白字符。错误只返回`credential_file_unavailable_or_invalid`，不含文件正文/密钥/原异常。
+
+只有execute支持该选项；preview/captures/stop/finalize不会读文件。审批、前一例人工门和TTY检查均先于读取；发送前仍重核额度/价格/冻结版本和STOP。错误文件不会切换到另一认证来源；已启动真实账本会按既有失败合同永久STOP，因此先填写好，再核实新鲜前置材料并执行。
+
+```sh
+# 追加到下节的人工execute命令；文件由用户亲自填写启用。
+# --credentials-file "/Users/chenyunzhe/Library/Application Support/LiveDay0/credentials.json"
+# 新增定向验证只读临时目录中的假密钥，不联网、不执行execute、不读用户文件。
+python3 -I -S -B benchmarks/semantic_quality_preflight_v1/test_credentials.py
+```
+
+新增版本沿用同一真实账本/启动见证。原20个捕获边界方法的定向证据保持历史范围，不声称全套重新运行；此次只验证新reader和审批/人工/TTY/非execute边界。配置文件读取支持不代表真实模型连接或语义质量通过。
 
 ## 逐例人工审核与留出锁
 
 一次命令只发下一例并退出，不会自动跑12例。下一次必须提供前一split的report/review：先只读导出账本成功前缀，再复用原`prepare.py ingest/template/score`。入口从自己immutable captures重建report并比对，评分只读固定副本；不能拿另一份report/前次结果解锁。逐例门检查已捕获前缀每例`extraction_pass`与完整人工证据；partial score的整split标志不被误用。d06后要求开发六例完整phase PASS才允许h01。第12次后还需`finalize`人工收尾；后三轴不继承提取成绩。
 
-以下仅是**以后获新授权且独立源码审核通过**的用户操作顺序，本轮未运行：
+以下是独立源码审核、既定新评测授权和新鲜额度/价格核实均通过后的用户操作顺序；Agent未运行execute：
 
 ```sh
 # 首条：四份无秘密审批/核实材料须由可信操作者准备；运行后用户自己隐藏认证。

@@ -1,6 +1,7 @@
 """One fixed evaluation, one persistent ledger. Real mode is manual-only.
 
-Run directly with -I -S -B. No environment/credential-file lookup or retries.
+Run directly with -I -S -B. No environment lookup or retries.
+An explicit private credential file is read only by the human execute path.
 The Agent may exercise fixture_capture only; --execute is for a future human.
 """
 from pathlib import Path
@@ -13,6 +14,7 @@ import hashlib
 import importlib
 import json
 import os
+import stat
 import subprocess
 import sys
 import types
@@ -79,6 +81,62 @@ def sync_dir(path):
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def private_credential(path):
+    """Human-enabled file only; never call this on a user's file from the Agent."""
+    directory = fd = None
+    try:
+        path = Path(path)
+        if not path.is_absolute() or '..' in path.parts or len(path.parts) < 3:
+            raise ValueError
+        directory = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        for part in path.parts[1:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        parent = os.fstat(directory)
+        if parent.st_uid != os.geteuid() or stat.S_IMODE(parent.st_mode) != 0o700:
+            raise ValueError
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1 or info.st_size > 4096):
+            raise ValueError
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            raw = stream.read(4097)
+        if len(raw) > 4096:
+            raise ValueError
+        def pairs(items):
+            result = {}
+            for k, v in items:
+                if k in result:
+                    raise ValueError
+                result[k] = v
+            return result
+        def nonfinite(value):
+            raise ValueError
+        value = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite)
+        if not isinstance(value, dict) or set(value) != {'enabled', 'api_key'} or value['enabled'] is not True:
+            raise ValueError
+        key = value['api_key']
+        if (not isinstance(key, str) or not 1 <= len(key) <= 512
+                or any(not 33 <= ord(char) <= 126 for char in key)):
+            raise ValueError
+        return key
+    except Exception:
+        # No parser error, path, supplied content or secret appears in output.
+        fail('credential_file_unavailable_or_invalid')
+    finally:
+        if fd is not None:
+            os.close(fd)
+        if directory is not None:
+            os.close(directory)
+
+
+def credential_reader_for(path):
+    # Selection is lazy: preview and failed authorization never read the file.
+    return getpass.getpass if path is None else lambda prompt: private_credential(path)
 
 
 def exclusive(path, value):
@@ -324,7 +382,8 @@ def capture_next(state, release_sha, cases, c, glm, local, *, grant_sha, cap,
         request = c.ExtractionRequest.build('quality-v1:' + case['id'], 'v1', case['content'],
                                              case['occurred_at'], max_proposals=1)
         # Key input belongs exclusively to a future human terminal, after all
-        # code/grant/quota/price/human gates. No args/env/file secret lookup.
+        # code/grant/quota/price/human gates. The CLI carries only a path,
+        # never the key; file reading requires explicit human opt-in.
         if fixture:
             transport = glm.GLMHTTP(fixture_port=fixture_port, timeout=timeout)
         else:
@@ -389,7 +448,10 @@ def main():
     p.add_argument('--split', choices=['development','heldout'], default='development')
     p.add_argument('--out'); p.add_argument('--report'); p.add_argument('--review')
     p.add_argument('--code-review'); p.add_argument('--grant'); p.add_argument('--quota'); p.add_argument('--price')
+    p.add_argument('--credentials-file', help='Explicit private JSON path; human execute only, no fallback')
     args = p.parse_args()
+    if args.credentials_file is not None and args.command != 'execute':
+        fail('credentials_file_execute_only')
     try:
         release, cases, c, glm, local = frozen()
     except BaseException:
@@ -443,7 +505,7 @@ def main():
             if frozen()[0] != release or authorization(release,args.code_review,args.grant,args.quota,args.price) != (grant_sha, cap):
                 stopped(REAL_STATE, 'pre_send_scope_changed')
         print(json.dumps(capture_next(REAL_STATE,release,cases,c,glm,local,grant_sha=grant_sha,
-            cap=cap,report=args.report,review=args.review,credential_reader=getpass.getpass,
+            cap=cap,report=args.report,review=args.review,credential_reader=credential_reader_for(args.credentials_file),
             pre_send_check=fresh_pre_send)))
     except BaseException as exc:
         waiting = isinstance(exc, Stop) and exc.args[0] in {
