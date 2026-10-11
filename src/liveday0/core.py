@@ -874,7 +874,8 @@ class MemoryService:
         options: RecallOptions | None = None,
     ) -> dict[str, Any]:
         options = options or RecallOptions()
-        with deadline_scope(options.timeout_ms):
+        with deadline_scope(options.timeout_ms, pending_delta_limit=options.pending_delta_limit,
+                            catch_up_target_limit=options.catch_up_target_limit):
             if not isinstance(query, str) or len(query) > 2000:
                 raise RecallBudgetExceeded('query_input_limit')
             from itertools import islice

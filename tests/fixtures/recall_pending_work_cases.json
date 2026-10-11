@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "base_commit": "f8c6873fa3363ec8d77d313a87bbc2a00a7fe177",
+  "defaults": {
+    "pending_delta_limit": 128,
+    "maximum": 4096,
+    "catch_up_target_limit": 8,
+    "maximum_targets": 32
+  },
+  "expectations": [
+    "One recall shares a pending row budget between canonical catch-up and effective-event overlays, SQL fetch at most remaining+1 sentinel.",
+    "Safe overlay3 with cap2: maintenance-required retryable no context/snapshot; journal/version/job failure budget preserved. cap3 returns all3 references and latest result, canonical stillv1.",
+    "Two safe events with2 deltas each share cap3 (reject)/cap4 (complete); not separate per-event budgets.",
+    "Unsafe3 cap2 rejects with all pending/job attempts/failures intact; cap3 atomically absorbs all and returns v2 latest state.",
+    "Two unsafe targets with1 delta each exceed catch-up cap1: metadata at most2 sentinel, no mass ready marking/claims. cap2 withdelta2 completes both.",
+    "Read-before-use runs only selected unsafe event-rewrite jobs; no opportunistic candidate/projection/safe quiet-time jobs.",
+    "Actual SQL failure after rewrite rolls back body/absorption but records one real failure; retry retains pending then succeeds under a new finite cycle.",
+    "Correction after overflow intentionally invalidates pending and replaces target; deleted target remains inaccessible, no delayed catch-up revives either old view.",
+    "CLI over-limit static exit2 with retryable/maintenance_required true and no memory body; scopes always reset.",
+    "Standalone background run-jobs remains independently operated; do not claim its total work or full recall byte/graph/SQL work is bounded here."
+  ],
+  "fixture_size": "Separate small tenants: 3-row safe, 2x2 safe, 3-row unsafe, 2x1 unsafe, one fault/recovery, one correction, one deletion. No real model or private input.",
+  "retry_semantics": "Retain journal; maintenance can catch up separately or a caller can select a larger finite allowance. A limit is not synthesis failure and must not burn failure_count."
+}

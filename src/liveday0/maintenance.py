@@ -8,7 +8,8 @@ from psycopg import Error as DatabaseError
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import InterpretationRevoked, NotFound, VersionConflict, RecallDeadlineExceeded
+from liveday0.exceptions import InterpretationRevoked, NotFound, VersionConflict, RecallDeadlineExceeded, RecallMaintenanceRequired
+from liveday0.recall_limits import pending_delta_fetch_limit, consume_pending_deltas, catch_up_target_limit, consume_catch_up_targets
 from liveday0.serialization import canonical_json, fingerprint
 from liveday0.types import ProjectionRebuildInput
 
@@ -255,6 +256,7 @@ class MaintenanceEngine:
         limit: int = 10,
         fail_job_types: Iterable[str] = (),
         projection_outputs: dict[UUID, dict] | None = None,
+        job_ids: list[UUID] | None = None,
     ) -> list[dict]:
         failures = set(fail_job_types)
         if projection_outputs:
@@ -266,10 +268,11 @@ class MaintenanceEngine:
                     """
                     SELECT * FROM maintenance_jobs
                     WHERE tenant_id=%s AND state IN ('pending','retry') AND available_at <= now()
+                      AND (%s::uuid[] IS NULL OR (job_type='event_rewrite' AND id=ANY(%s::uuid[])))
                     ORDER BY available_at, created_at
                     FOR UPDATE SKIP LOCKED LIMIT 1
                     """,
-                    (self.tenant_id,),
+                    (self.tenant_id, job_ids, job_ids),
                 ).fetchone()
                 if not job:
                     break
@@ -311,8 +314,8 @@ class MaintenanceEngine:
                                 (self.tenant_id, job["id"]),
                             )
                             result = {"job_id": job["id"], "state": "succeeded", "outcome": outcome}
-                except RecallDeadlineExceeded:
-                    # Caller time exhaustion is not a failed synthesis attempt.
+                except (RecallDeadlineExceeded, RecallMaintenanceRequired):
+                    # Caller exhaustion is not a failed synthesis attempt.
                     raise
                 except Exception as exc:
                     # The nested transaction has rolled back; the outer transaction
@@ -472,21 +475,36 @@ class MaintenanceEngine:
             return result.rowcount
 
     def catch_up_unsafe_overlays(self) -> list[dict]:
+        limit = catch_up_target_limit()
         with tenant_transaction(self.tenant_id) as conn:
-            conn.execute(
+            jobs = conn.execute(
                 """
-                UPDATE maintenance_jobs j SET available_at=now(), updated_at=now()
+                SELECT j.id,j.target_id FROM maintenance_jobs j
+                JOIN semantic_cards c ON c.tenant_id=j.tenant_id AND c.id=j.target_id
                 WHERE j.tenant_id=%s AND j.job_type='event_rewrite'
-                  AND j.state='pending'
+                  AND c.lifecycle IN ('active','provisional')
+                  AND (j.state='pending' OR (j.state='retry' AND j.available_at<=now()))
                   AND EXISTS (
                     SELECT 1 FROM event_deltas d
                     WHERE d.tenant_id=j.tenant_id AND d.event_id=j.target_id
                       AND d.state='pending' AND d.delta @> '{"requires_restructure": true}'::jsonb
                   )
+                ORDER BY j.created_at,j.id LIMIT %s
                 """,
-                (self.tenant_id,),
+                (self.tenant_id, limit + 1),
+            ).fetchall()
+            if len(jobs) > limit:
+                consume_catch_up_targets(len(jobs))  # Seals an active query cycle.
+                raise RecallMaintenanceRequired('catch_up_target_limit')
+            consume_catch_up_targets(len(jobs))
+            if not jobs:
+                return []
+            conn.execute(
+                """UPDATE maintenance_jobs SET available_at=now(),updated_at=now()
+                WHERE tenant_id=%s AND id=ANY(%s) AND state='pending'""",
+                (self.tenant_id, [job['id'] for job in jobs]),
             )
-        return self.run_ready(limit=8)
+        return self.run_ready(limit=limit, job_ids=[job['id'] for job in jobs])
 
     def _rewrite_event(self, conn, job: dict) -> str:
         card = conn.execute(
@@ -502,10 +520,11 @@ class MaintenanceEngine:
             """
             SELECT * FROM event_deltas
             WHERE tenant_id=%s AND event_id=%s AND state='pending'
-            ORDER BY created_at, id FOR UPDATE
+            ORDER BY created_at, id LIMIT %s FOR UPDATE
             """,
-            (self.tenant_id, card["id"]),
+            (self.tenant_id, card["id"], pending_delta_fetch_limit()),
         ).fetchall()
+        consume_pending_deltas(len(deltas))
         if not deltas:
             return "already caught up"
         if job["baseline_version"] is not None and card["current_version"] != job["baseline_version"]:

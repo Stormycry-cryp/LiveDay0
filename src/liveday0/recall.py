@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded, RecallWorkLimitExceeded
-from liveday0.recall_limits import check_deadline, recall_json, wire_bytes
+from liveday0.recall_limits import check_deadline, recall_json, wire_bytes, pending_delta_fetch_limit, consume_pending_deltas
 from liveday0.types import RecallOptions
 
 
@@ -370,10 +370,11 @@ class RecallCompiler:
                 """
                 SELECT evidence_id, delta FROM event_deltas
                 WHERE tenant_id=%s AND event_id=%s AND state='pending'
-                ORDER BY created_at, id
+                ORDER BY created_at, id LIMIT %s
                 """,
-                (self.tenant_id, row["id"]),
+                (self.tenant_id, row["id"], pending_delta_fetch_limit()),
             ).fetchall()
+            consume_pending_deltas(len(deltas))
             unsafe = any(delta["delta"].get("requires_restructure") for delta in deltas)
             if not unsafe:
                 for delta in deltas:

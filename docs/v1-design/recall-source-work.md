@@ -27,3 +27,5 @@ SQL按原tenant/status条件与来源时间排序，最多返回`limit+1`条元�
 这不是整个召回的硬资源上限。SQL排序/扫描/FTS/vector discovery、规范body与source_kind字节、pending增量、全局unsafe检测/catch-up触达、派生支持集合/mention候选/trace聚合等仍有未完成的工作量门。现有statement_timeout取消和服务deadline继续有效，单步Python不能硬中断。不能将小组GREEN改称长历史或高连接节点整体完成。
 
 下一项优先检查pending增量与read-before-use追平的有限工作边界；复用既有时序/失败预算证据，定向超限必须保持最新事实安全，不返回已知旧结论、不烧维护失败预算，不添加模型调用或全量扫描重审。
+
+后续[pending与查询追平工作门](recall-pending-work.md)已增加一次周期共享128 pending行和8预选任务的有限门，超限明确可重试待维护；完整资源合同剩余上限见其有限闭合表。本页原来源证据不变。

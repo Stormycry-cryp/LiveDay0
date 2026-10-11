@@ -55,6 +55,12 @@ class RecallWorkLimitExceeded(RecallLimitError):
     code = 'recall_work_limit_exceeded'
 
 
+class RecallMaintenanceRequired(RecallWorkLimitExceeded):
+    code = 'recall_maintenance_required'
+    retryable = True
+    maintenance_required = True
+
+
 class RecallDeadlineExceeded(RecallLimitError):
     code = 'recall_deadline_exceeded'
 

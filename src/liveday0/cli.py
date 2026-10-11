@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from liveday0.core import MemoryService
-from liveday0.exceptions import RecallLimitError
+from liveday0.exceptions import RecallLimitError, RecallMaintenanceRequired
 from liveday0.recall_limits import recall_json
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from liveday0.types import EvidenceInput, RecallOptions, SemanticInput
@@ -81,6 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
     recall.add_argument("--context-tokens", type=int, default=1600)
     recall.add_argument("--timeout-ms", type=int, default=800)
     recall.add_argument("--source-refs", type=int, default=256)
+    recall.add_argument("--pending-deltas", type=int, default=128)
+    recall.add_argument("--catch-up-targets", type=int, default=8)
 
     expand = sub.add_parser("expand-snapshot", help="read one complete bounded pinned card")
     expand.add_argument("tenant_id")
@@ -158,12 +160,17 @@ def main(argv: list[str] | None = None) -> None:
                     options=RecallOptions(simulate_vector_timeout=args.simulate_vector_timeout,
                         context_byte_limit=args.context_bytes, context_token_limit=args.context_tokens,
                         source_reference_limit=args.source_refs,
+                        pending_delta_limit=args.pending_deltas,
+                        catch_up_target_limit=args.catch_up_targets,
                         timeout_ms=args.timeout_ms))
             else:
                 result = service.expand_snapshot(UUID(args.snapshot_id), UUID(args.item_id),
                     options=RecallOptions(expansion_byte_limit=args.max_bytes, timeout_ms=args.timeout_ms))
         except RecallLimitError as error:
-            print(recall_json({'error': error.code, 'reason': error.reason, 'context_available': False}))
+            outcome = {'error': error.code, 'reason': error.reason, 'context_available': False}
+            if isinstance(error, RecallMaintenanceRequired):
+                outcome.update(retryable=True, maintenance_required=True)
+            print(recall_json(outcome))
             raise SystemExit(2) from None
         print(recall_json(result))
         return
