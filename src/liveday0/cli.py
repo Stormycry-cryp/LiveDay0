@@ -8,6 +8,8 @@ from typing import Any
 from uuid import UUID
 
 from liveday0.core import MemoryService
+from liveday0.exceptions import RecallLimitError
+from liveday0.recall_limits import recall_json
 from liveday0.migrations import migrate_down, migrate_up, migration_status
 from liveday0.types import EvidenceInput, RecallOptions, SemanticInput
 
@@ -75,6 +77,16 @@ def build_parser() -> argparse.ArgumentParser:
     recall.add_argument("query")
     recall.add_argument("--current-evidence", action="append", default=[])
     recall.add_argument("--simulate-vector-timeout", action="store_true")
+    recall.add_argument("--context-bytes", type=int, default=16_384)
+    recall.add_argument("--context-tokens", type=int, default=1600)
+    recall.add_argument("--timeout-ms", type=int, default=800)
+
+    expand = sub.add_parser("expand-snapshot", help="read one complete bounded pinned card")
+    expand.add_argument("tenant_id")
+    expand.add_argument("snapshot_id")
+    expand.add_argument("item_id")
+    expand.add_argument("--max-bytes", type=int, default=65_536)
+    expand.add_argument("--timeout-ms", type=int, default=800)
 
     release = sub.add_parser("release-snapshot", help="explicitly end one pinned recall cycle")
     release.add_argument("tenant_id")
@@ -137,12 +149,22 @@ def main(argv: list[str] | None = None) -> None:
             trace=payload.get("trace"),
             semantics=[_semantic(item) for item in payload.get("semantics", [])],
         )
-    elif args.command == "recall":
-        result = service.recall(
-            args.query,
-            current_evidence_ids=[UUID(value) for value in args.current_evidence],
-            options=RecallOptions(simulate_vector_timeout=args.simulate_vector_timeout),
-        )
+    elif args.command in {"recall", "expand-snapshot"}:
+        try:
+            if args.command == 'recall':
+                result = service.recall(args.query,
+                    current_evidence_ids=[UUID(value) for value in args.current_evidence],
+                    options=RecallOptions(simulate_vector_timeout=args.simulate_vector_timeout,
+                        context_byte_limit=args.context_bytes, context_token_limit=args.context_tokens,
+                        timeout_ms=args.timeout_ms))
+            else:
+                result = service.expand_snapshot(UUID(args.snapshot_id), UUID(args.item_id),
+                    options=RecallOptions(expansion_byte_limit=args.max_bytes, timeout_ms=args.timeout_ms))
+        except RecallLimitError as error:
+            print(recall_json({'error': error.code, 'reason': error.reason, 'context_available': False}))
+            raise SystemExit(2) from None
+        print(recall_json(result))
+        return
     elif args.command == "correct":
         payload = _load_json(args.payload)
         result = service.correct_card(

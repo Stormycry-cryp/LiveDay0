@@ -151,6 +151,8 @@ uv run liveday0 observe "$TENANT_ID" '{
 uv run liveday0 recall "$TENANT_ID" "花生 饮食"
 ```
 
+召回默认完整包16384 bytes、800ms协作式执行预算；完整展开默认65536 bytes。超限有静态错误/退出码，省略卡保留可调用句柄；具体配置、出处保护、连接地址要求与墙钟限制见[返回包与执行预算](./docs/v1-design/recall-return-limits.md)。
+
 v1 没有内置模型 provider。调用方负责提出范围明确的语义内容或派生视图替代主体，内核负责检查来源、租户、版本、生命周期和依赖。模型因此不会拿到没有边界的数据库写权限。
 
 ### 纠正、删除和维护

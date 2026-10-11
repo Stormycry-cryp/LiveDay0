@@ -12,10 +12,11 @@ from psycopg.types.json import Jsonb
 from liveday0.config import event_delta_soft_limit, event_quiet_seconds
 from liveday0.db import tenant_transaction
 from liveday0.deletion import read_deletion, check_deletion_conn
-from liveday0.exceptions import DeletedSource, IdempotencyConflict, InterpretationRevoked, NotFound, VersionConflict
+from liveday0.exceptions import RecallBudgetExceeded, DeletedSource, IdempotencyConflict, InterpretationRevoked, NotFound, VersionConflict
 from liveday0.interpretation import InterpretationEngine, observation_receipt, revoke_source, sources_for_card
 from liveday0.maintenance import MaintenanceEngine
 from liveday0.recall import RecallCompiler
+from liveday0.recall_limits import deadline_scope, wire_bytes
 from liveday0.serialization import canonical_json, fingerprint, source_identity_digest
 from liveday0.types import EvidenceInput, ProjectionRebuildInput, RecallOptions, SemanticInput
 
@@ -872,15 +873,27 @@ class MemoryService:
         current_evidence_ids: Iterable[UUID] = (),
         options: RecallOptions | None = None,
     ) -> dict[str, Any]:
-        self.maintenance.catch_up_unsafe_overlays()
-        return self.recall_compiler.compile(
-            query,
-            current_evidence_ids=list(current_evidence_ids),
-            options=options or RecallOptions(),
-        )
+        options = options or RecallOptions()
+        with deadline_scope(options.timeout_ms):
+            if not isinstance(query, str) or len(query) > 2000:
+                raise RecallBudgetExceeded('query_input_limit')
+            from itertools import islice
+            current_ids = list(islice(current_evidence_ids, options.candidate_limit + 1))
+            if len(current_ids) > options.candidate_limit:
+                raise RecallBudgetExceeded('current_evidence_reference_limit')
+            self.maintenance.catch_up_unsafe_overlays()
+            return self.recall_compiler.compile(
+                query, current_evidence_ids=current_ids, options=options,
+            )
 
-    def expand_snapshot(self, snapshot_id: UUID, item_id: UUID) -> dict[str, Any]:
-        return self.recall_compiler.expand(snapshot_id, item_id)
+    def expand_snapshot(self, snapshot_id: UUID, item_id: UUID,
+                        *, options: RecallOptions | None = None) -> dict[str, Any]:
+        options = options or RecallOptions()
+        with deadline_scope(options.timeout_ms):
+            card = self.recall_compiler.expand(snapshot_id, item_id)
+            if wire_bytes(card) > options.expansion_byte_limit:
+                raise RecallBudgetExceeded('complete_expansion_byte_limit')
+            return card
 
     def release_snapshot(self, snapshot_id: UUID) -> dict[str, Any]:
         return self.recall_compiler.release(snapshot_id)

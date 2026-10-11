@@ -240,7 +240,7 @@ def test_card_and_context_budgets_omit_whole_units_with_expansion(service):
     )["card_ids"][0]
     context = service.recall(
         "超长事件 完整语义",
-        options=RecallOptions(card_token_limit=40, context_token_limit=100),
+        options=RecallOptions(card_token_limit=40, context_token_limit=350),
     )
     assert not context["layers"]["events"]
     assert context["expansion_handles"] == [

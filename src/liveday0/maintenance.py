@@ -8,7 +8,7 @@ from psycopg import Error as DatabaseError
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import InterpretationRevoked, NotFound, VersionConflict
+from liveday0.exceptions import InterpretationRevoked, NotFound, VersionConflict, RecallDeadlineExceeded
 from liveday0.serialization import canonical_json, fingerprint
 from liveday0.types import ProjectionRebuildInput
 
@@ -311,6 +311,9 @@ class MaintenanceEngine:
                                 (self.tenant_id, job["id"]),
                             )
                             result = {"job_id": job["id"], "state": "succeeded", "outcome": outcome}
+                except RecallDeadlineExceeded:
+                    # Caller time exhaustion is not a failed synthesis attempt.
+                    raise
                 except Exception as exc:
                     # The nested transaction has rolled back; the outer transaction
                     # can now persist a bounded, content-free diagnostic safely.

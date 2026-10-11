@@ -6,6 +6,7 @@ from uuid import uuid4
 from liveday0.exceptions import InterpretationRevoked
 from liveday0.local_extraction import SYNTHETIC_EXAMPLES
 from liveday0.local_host import LocalMemorySession
+from liveday0.recall_limits import recall_json
 
 
 def terminal_confirmation(approval):
@@ -74,7 +75,8 @@ def main(*, demo=False):
         if line.strip()=='quit': break
         try:
             result=session.handle(json.loads(line))
-            print(json.dumps(result,ensure_ascii=False,default=str,indent=2))
+            print(recall_json(result) if isinstance(result,dict) and 'context' in result
+                  else json.dumps(result,ensure_ascii=False,default=str,indent=2))
         except Exception as error:
             # No request/prompt dumps or persistent interaction log.
             print(json.dumps({'error':type(error).__name__,'message':str(error)},ensure_ascii=False))

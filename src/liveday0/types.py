@@ -50,8 +50,21 @@ class RecallOptions:
     final_limit: int = 12
     per_relation_family_limit: int = 6
     timeout_ms: int = 800
+    context_byte_limit: int = 16_384
+    expansion_byte_limit: int = 65_536
     simulate_vector_timeout: bool = False
     query_embedding: tuple[float, ...] | None = None
+
+    def __post_init__(self):
+        for name, maximum in (
+            ('card_token_limit', 65_536), ('context_token_limit', 262_144),
+            ('context_byte_limit', 1_048_576), ('expansion_byte_limit', 1_048_576),
+            ('timeout_ms', 10_000), ('candidate_limit', 512),
+            ('relation_limit', 512), ('final_limit', 512), ('per_relation_family_limit', 512),
+        ):
+            value = getattr(self, name)
+            if type(value) is not int or not 1 <= value <= maximum:
+                raise ValueError(f'{name} must be a positive bounded integer (maximum {maximum})')
 
 
 @dataclass(frozen=True)

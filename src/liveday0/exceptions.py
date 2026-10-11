@@ -36,3 +36,24 @@ class SnapshotInvalidated(LiveDay0Error):
 
 class UnsafeOverlay(LiveDay0Error):
     pass
+
+
+class RecallLimitError(LiveDay0Error):
+    """Static, content-free limit outcome; no usable memory context accompanies it."""
+    code = 'recall_limit_error'
+
+    def __init__(self, reason):
+        self.reason = reason
+        super().__init__(reason)
+
+
+class RecallBudgetExceeded(RecallLimitError):
+    code = 'recall_budget_exceeded'
+
+
+class RecallDeadlineExceeded(RecallLimitError):
+    code = 'recall_deadline_exceeded'
+
+
+class RecallDeadlineUnavailable(RecallDeadlineExceeded):
+    code = 'recall_deadline_unavailable'

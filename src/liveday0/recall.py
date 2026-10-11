@@ -10,7 +10,8 @@ from uuid import UUID, uuid4
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import NotFound, SnapshotInvalidated
+from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded
+from liveday0.recall_limits import check_deadline, recall_json, wire_bytes
 from liveday0.types import RecallOptions
 
 
@@ -95,6 +96,7 @@ class RecallCompiler:
             source_map = self._source_map(conn, [row["id"] for row in cards])
             scored: list[tuple[float, dict]] = []
             for row in cards:
+                check_deadline()
                 if row["id"] in unsafe_ids:
                     continue
                 score = self._relevance(query, row["body"])
@@ -115,6 +117,7 @@ class RecallCompiler:
 
             cards_by_id: dict[UUID, dict[str, Any]] = {}
             for row in selected_rows:
+                check_deadline()
                 cards_by_id[row["id"]] = self._card_from_row(
                     conn,
                     row,
@@ -158,54 +161,11 @@ class RecallCompiler:
                 "ambiguous_mentions",
                 "evidence_summary",
             )
-            bounded_layers: dict[str, list[dict[str, Any]]] = {key: [] for key in ordered_layers}
-            expansion_store: dict[str, dict[str, Any]] = {}
-            handles: list[dict[str, str]] = []
-            used_tokens = 0
-            seen_identity: set[str] = set()
-            for layer in ordered_layers:
-                for original in layers[layer]:
-                    identity = original["canonical_identity"]
-                    if identity in seen_identity:
-                        continue
-                    seen_identity.add(identity)
-                    expansion_store[str(original["id"])] = self._json_safe(original)
-                    card = self._fit_card(original, options.card_token_limit)
-                    tokens = self._tokens(card)
-                    if card is None or used_tokens + tokens > options.context_token_limit:
-                        handles.append(
-                            {
-                                "item_id": str(original["id"]),
-                                "type": original["type"],
-                                "reason": "whole_card_omitted_by_budget",
-                            }
-                        )
-                        continue
-                    bounded_layers[layer].append(card)
-                    used_tokens += tokens
-
             snapshot_id = uuid4()
-            historical_count = sum(
-                len(bounded_layers[key])
-                for key in ("active_threads", "relationship_context", "events", "ambiguous_mentions", "evidence_summary")
+            context, expansion_store = self._fit_context(
+                layers, ordered_layers, degraded, snapshot_id, tenant['revision'], options,
             )
-            context = {
-                "snapshot": {
-                    "id": str(snapshot_id),
-                    "tenant_revision": tenant["revision"],
-                    "state": "active",
-                },
-                "degraded": bool(degraded),
-                "degraded_reasons": degraded,
-                "historical_available": historical_count > 0,
-                "layers": bounded_layers,
-                "expansion_handles": handles,
-                "budget": {
-                    "estimated_tokens": used_tokens,
-                    "card_token_limit": options.card_token_limit,
-                    "context_token_limit": options.context_token_limit,
-                },
-            }
+            check_deadline('publish')
             referenced_ids = list(cards_by_id) + [item["id"] for item in projections]
             conn.execute(
                 """
@@ -225,6 +185,68 @@ class RecallCompiler:
                 ),
             )
             return self._json_safe(context)
+
+    def _fit_context(self, layers, ordered_layers, degraded, snapshot_id, revision, options):
+        originals = []
+        seen = set()
+        for layer in ordered_layers:
+            for original in layers[layer]:
+                check_deadline()
+                if original['canonical_identity'] in seen:
+                    continue
+                seen.add(original['canonical_identity'])
+                originals.append((layer, self._json_safe(original)))
+        expansion_store = {str(card['id']): card for _, card in originals}
+        context = {
+            'snapshot': {'id': str(snapshot_id), 'tenant_revision': revision, 'state': 'active'},
+            'degraded': False, 'degraded_reasons': [], 'historical_available': False,
+            'layers': {layer: [] for layer in ordered_layers},
+            'expansion_handles': [{'item_id': str(card['id']), 'type': card['type'],
+                'reason': 'whole_card_omitted_by_budget'} for _, card in originals],
+            'budget': {'estimated_tokens': 0, 'payload_bytes': 0,
+                'card_token_limit': options.card_token_limit,
+                'context_token_limit': options.context_token_limit,
+                'context_byte_limit': options.context_byte_limit,
+                'status': 'complete', 'omitted_card_count': 0,
+                'token_estimator': 'compact_json_characters_div4_ceiling_not_model_tokens'},
+        }
+        def fits():
+            check_deadline()
+            omitted = len(context['expansion_handles'])
+            shortened = any(card.get('representation') for layer in context['layers'].values() for card in layer)
+            context['budget'].update(status='reduced' if omitted or shortened else 'complete',
+                                     omitted_card_count=omitted)
+            context['degraded_reasons'] = list(degraded) + (['context_budget_reduced'] if omitted else [])
+            context['degraded'] = bool(context['degraded_reasons'])
+            context['historical_available'] = any(context['layers'][key] for key in
+                ('active_threads','relationship_context','events','ambiguous_mentions','evidence_summary'))
+            # The size report is inside its own envelope; include its final digit widths.
+            for _ in range(8):
+                before = (context['budget']['estimated_tokens'], context['budget']['payload_bytes'])
+                after = (self._tokens(context), wire_bytes(context))
+                context['budget'].update(estimated_tokens=after[0], payload_bytes=after[1])
+                if after == before:
+                    check_deadline()
+                    return after[0] <= options.context_token_limit and after[1] <= options.context_byte_limit
+            raise RecallBudgetExceeded('size_metadata_not_stable')
+        # Every omission needs its callable item handle. Never silently drop references.
+        if not fits():
+            raise RecallBudgetExceeded('complete_reference_envelope_limit')
+        for layer, original in originals:
+            check_deadline()
+            card = self._fit_card(original, options.card_token_limit)
+            if card is None:
+                continue
+            handle = next(h for h in context['expansion_handles'] if h['item_id'] == str(original['id']))
+            index = context['expansion_handles'].index(handle)
+            context['expansion_handles'].pop(index)
+            context['layers'][layer].append(card)
+            if not fits():
+                context['layers'][layer].pop()
+                context['expansion_handles'].insert(index, handle)
+        if not fits():
+            raise RecallBudgetExceeded('complete_reference_envelope_limit')
+        return context, expansion_store
 
     def release(self, snapshot_id: UUID) -> dict[str, Any]:
         """Caller has finished this pinned cycle; expire its operational copy only."""
@@ -567,7 +589,7 @@ class RecallCompiler:
 
     @staticmethod
     def _tokens(value: Any) -> int:
-        return max(1, len(json.dumps(value, ensure_ascii=False, default=str)) // 4)
+        return max(1, (len(recall_json(value)) + 1 + 3) // 4)
 
     @classmethod
     def _json_safe(cls, value: Any) -> Any:
