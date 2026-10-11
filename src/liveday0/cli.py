@@ -55,6 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
     migration.add_argument("action", choices=("up", "down", "status"))
     migration.add_argument("--steps", type=int, default=1)
 
+    retention = sub.add_parser("retention", help="read-only operational row retention preview")
+    retention.add_argument("tenant_id")
+    retention.add_argument("--dry-run", action="store_true", required=True)
+    retention.add_argument("--snapshot-days", type=int)
+    retention.add_argument("--job-days", type=int)
+    retention.add_argument("--row-warning", type=int, default=10000)
+    retention.add_argument("--sample-limit", type=int, default=20)
+
     tenant = sub.add_parser("tenant", help="establish a server-side tenant scope")
     tenant.add_argument("tenant_id")
 
@@ -109,6 +117,11 @@ def main(argv: list[str] | None = None) -> None:
         else:
             result = migration_status()
         print(_json(result))
+        return
+    if args.command == "retention":
+        from liveday0.retention import preview_retention
+        print(_json(preview_retention(UUID(args.tenant_id), snapshot_days=args.snapshot_days,
+            job_days=args.job_days, row_warning=args.row_warning, sample_limit=args.sample_limit)))
         return
     service = _service(args.tenant_id)
     if args.command == "tenant":

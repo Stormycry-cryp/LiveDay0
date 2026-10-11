@@ -239,6 +239,8 @@ uv run python benchmarks/benchmark_recall.py
 
 维护执行出现 `retry/dead` 会以退出码 1 结束；`run-jobs "$TENANT_ID" --status --limit 20` 可在新进程中只读查看持久未完成/失败状态。空执行结果不代表恢复完成。状态与安全重试边界见 [维护说明](./docs/v1-design/maintenance-reliability.md)。
 
+`retention "$TENANT_ID" --dry-run` 只读统计任务和快照增长；年龄窗口需显式配置，不自动删除、过期或缩短生活记忆保留期。安全候选与保留约束见 [保留预览](./docs/v1-design/retention-preview.md)。
+
 ---
 
 ## 接下来可以验证什么
