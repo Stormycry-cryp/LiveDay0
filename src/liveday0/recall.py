@@ -550,6 +550,14 @@ class RecallCompiler:
                 matched = sum(1 for gram in bigrams if gram in text)
                 if matched >= 2 and matched / len(bigrams) >= 0.5:
                     score += matched * 0.2
+        if score == 0:
+            # A conversational wrapper should not dilute an intact Han cue.
+            # Four consecutive characters avoid using a city/person pair alone;
+            # this is lexical candidate relevance, never a semantic conclusion.
+            grams = {run[i:i + 4] for run in re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]+", query)
+                     for i in range(len(run) - 3)}
+            matched = sum(gram in text for gram in grams)
+            score = min(2.0, matched * 0.2)
         return score
 
     def _fit_card(self, card: dict[str, Any], limit: int) -> dict[str, Any] | None:

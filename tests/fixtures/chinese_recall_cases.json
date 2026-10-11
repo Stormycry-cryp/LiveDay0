@@ -1,0 +1,147 @@
+{
+  "contract_version": 1,
+  "synthetic": true,
+  "base_commit": "6b2942df0023287ce9d90a6bff81dd8503fc31b4",
+  "scope": "Four recent synthetic events inside the existing 48-candidate envelope; caller-supplied reviewed canonical inputs, not extraction quality or dormant Chinese discovery.",
+  "events": [
+    {
+      "key": "move",
+      "source": "为了离公司近些，我从北京搬到杭州。搬家后单程通勤缩短到二十分钟。",
+      "body": {
+        "goal_context": "为了离公司近些，从北京搬到杭州",
+        "development": "完成跨城搬家",
+        "current_result": "搬家后单程通勤缩短到二十分钟",
+        "boundaries": "仅当次搬家和通勤变化，不推断幸福感",
+        "uncertainty": "没有说明长期满意度"
+      }
+    },
+    {
+      "key": "visit",
+      "source": "周末在苏州看望母亲，陪她吃了一顿午饭。",
+      "body": {
+        "goal_context": "周末在苏州看望母亲",
+        "development": "一起吃午饭",
+        "current_result": "当次探望已结束",
+        "boundaries": "只说明本次探望",
+        "uncertainty": "没有其他关系评价"
+      }
+    },
+    {
+      "key": "movie",
+      "source": "周末在杭州和朋友看电影，散场后各自回家。",
+      "body": {
+        "goal_context": "周末在杭州和朋友看电影",
+        "development": "散场后各自回家",
+        "current_result": "当次观影结束",
+        "boundaries": "不表示参加足球比赛",
+        "uncertainty": "没有长期社交偏好证据"
+      }
+    },
+    {
+      "key": "course",
+      "source": "和朋友报名陶艺课，但还没付款，日期待确认。",
+      "lifecycle": "provisional",
+      "epistemic_state": "candidate",
+      "body": {
+        "goal_context": "和朋友报名陶艺课",
+        "current_result": "尚未付款",
+        "unfinished_future": "课程日期待确认",
+        "boundaries": "报名意向，不是已参加课程",
+        "uncertainty": "能否成行尚未确认"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "move_exact",
+      "kind": "should_recall",
+      "query": "从北京搬到杭州",
+      "expected_event_keys": [
+        "move"
+      ]
+    },
+    {
+      "id": "move_conversational",
+      "kind": "should_recall",
+      "query": "能不能帮我回想一下从北京搬到杭州那段经历，当时发生了什么变化呢？",
+      "expected_event_keys": [
+        "move"
+      ]
+    },
+    {
+      "id": "commute_conversational",
+      "kind": "should_recall",
+      "query": "搬家以后通勤缩短到二十分钟这件事，你还记得吗？",
+      "expected_event_keys": [
+        "move"
+      ]
+    },
+    {
+      "id": "visit_conversational",
+      "kind": "should_recall",
+      "query": "我想再聊聊周末在苏州看望母亲那次见面，以及对我的影响，可以吗？",
+      "expected_event_keys": [
+        "visit"
+      ]
+    },
+    {
+      "id": "same_city_unrelated",
+      "kind": "should_not_recall",
+      "query": "杭州这周足球赛门票在哪买？",
+      "expected_event_keys": []
+    },
+    {
+      "id": "wholly_unrelated",
+      "kind": "should_not_recall",
+      "query": "手机系统升级失败怎么办？",
+      "expected_event_keys": []
+    },
+    {
+      "id": "duplicate_replay",
+      "kind": "should_recall",
+      "query": "从北京搬到杭州",
+      "expected_event_keys": [
+        "move"
+      ],
+      "replay_same_request_count": 3,
+      "expected_sources": 1
+    },
+    {
+      "id": "ambiguous_outing",
+      "kind": "insufficient_evidence",
+      "query": "那次出门",
+      "expected_event_keys": [],
+      "expected_unbound_candidate_keys": [
+        "visit",
+        "movie"
+      ],
+      "expected_mention_state": "unbound"
+    },
+    {
+      "id": "unsupported_trait",
+      "kind": "insufficient_evidence",
+      "query": "我是不是一直更喜欢独居？",
+      "expected_event_keys": [],
+      "unsupported_claim": "一直更喜欢独居"
+    },
+    {
+      "id": "provisional_course",
+      "kind": "insufficient_evidence",
+      "query": "陶艺课",
+      "expected_event_keys": [
+        "course"
+      ],
+      "required_state": "candidate",
+      "required_uncertainty": "能否成行尚未确认",
+      "forbidden_claim": "已参加课程"
+    }
+  ],
+  "invariants": [
+    "No change to expectations after execution.",
+    "Same canonical request replay yields one identity and one source, not automatic semantic deduplication of different inputs.",
+    "All returned events retain source references, scope and uncertainty; provisional intent remains provisional.",
+    "Ambiguous mention stays unbound; no stable-trait or causal inference is synthesized.",
+    "Caller-supplied canonical truth remains unchanged; tests do not evaluate model extraction.",
+    "No whole-suite, real model or private data."
+  ]
+}

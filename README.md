@@ -37,6 +37,8 @@ LiveDay0 在 v1 中保留了几组容易被混在一起的东西。
 
 完整设计见 [`implementation_design.md`](./docs/v1-design/implementation_design.md)。七个可观察的验收场景见 [`acceptance_scenarios.md`](./docs/v1-design/acceptance_scenarios.md)。
 
+当前用户能力、已验收范围与剩余重点见[用户能力现状](./docs/v1-design/user-capability-status.md)；近期候选内的中文口语反例见[固定中文查询验收](./docs/v1-design/chinese-recall-cases.md)。
+
 ---
 
 ## 一段记忆怎样走过系统
