@@ -10,15 +10,15 @@
 | 不把重复讲述当多件事 | 同请求同幂等键重放一个身份，语义卡按规范身份去重 | 不同日期/陪同角色、共享provider key的三次经历在实际host保存中保持独立；不同原文的同一次经历仍未验证自动识别合并，不能据此保证自动归并质量 |
 | 改正或忘掉已保存内容 | 已测新操作的更正、删除、来源撤销、派生失效、旧快照拒绝与合法剩余支持重建 | 升级前历史删除回补、备份物理清除和真实生产全部交错仍未验收 |
 | 记忆随生活变化而整理 | 事件增量、追平、版本绑定的局部派生及可见waiting/retry/dead已有隔离证据；来源不足的候选不强绑 | 泛化新生活线索发现尚未实现，慢人物/关系理解与长期连续性不能宣称已稳定可用 |
-| 每次取回有大小和时间边界 | 默认完整context16KiB/展开64KiB；整体省略/引用或静态拒绝；800ms协作式工作deadline及真实SQL取消已验 | 选中卡片的来源引用传输/装配有总256行上限，超限整次拒绝；pending与查询追平共享总128行/8预选任务，超限可重试待维护；严格墙钟、载荷字节/全局unsafe/派生扇出等全部工作量与内存硬界未过，调用方额外包装另计 |
+| 每次取回有大小和时间边界 | 默认完整context16KiB/展开64KiB；整体省略/引用或静态拒绝；800ms协作式工作deadline及真实SQL取消已验 | 选中卡片的来源引用传输/装配有总256行上限，超限整次拒绝；pending与查询追平共享总128行/8预选任务，超限可重试待维护；派生support/trace共享总256输入行，超限整次拒绝可在新有限额度恢复；严格墙钟、载荷字节/全局unsafe/mention/维护扇出等全部工作量与内存硬界未过，调用方额外包装另计 |
 | 长期、多设备、多用户运行 | 核心租户门禁/RLS、受限角色、发行包迁移、小规模合成恢复及进程接续有证据；有显式快照释放和保留dry-run | 真实服务端身份/跨设备、生产RPO/RTO、长期增长治理、自动清理和生产恢复门尚未完成 |
 
-具体证据复用[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[来源引用工作门](recall-source-work.md)、[pending工作门与有限闭合表](recall-pending-work.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
+具体证据复用[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[来源引用工作门](recall-source-work.md)、[pending工作门与有限闭合表](recall-pending-work.md)、[派生support/trace输入门](recall-derived-input.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
 
 ## 最高优先级三项
 
 1. **完成生活输入到记忆的可靠质量门（原第二优先）。** 泛化自然文字的来源/主体、引语和假设、条件事实、普通生活痕迹与承诺；新生活材料如何形成事件/生活线索，以及人物/关系理解怎样随反证变化。先复用已有合成合同，补未验收小型生活旅程；真实模型质量需要新的明确授权与事先冻结独立评测，当前不可重试旧调用。
-2. **完成长期召回实用性与完整工作量门（原第三优先，当前继续项）。** 中文长历史/同义与重复不同表述仍开放；候选、选中来源及查询pending/追平的行数门已有定向证据；载荷字节、全局unsafe/派生邻域扇出、SQL成本及持久增长的完整上限仍未完成。保持空历史、出处、边界与不确定性，先选有限真实缺口，不以四字片段或小组全绿替代泛化验收。
+2. **完成长期召回实用性与完整工作量门（原第三优先，当前继续项）。** 中文长历史/同义与重复不同表述仍开放；候选、选中来源、查询pending/追平及派生support/trace的行数门已有定向证据；载荷字节、全局unsafe/派生邻域扇出、SQL成本及持久增长的完整上限仍未完成。保持空历史、出处、边界与不确定性，先选有限真实缺口，不以四字片段或小组全绿替代泛化验收。
 3. **完成真实长期运行门（原第四优先）。** 服务端不可伪造的tenant身份、真实受限角色和跨设备路径；确认任务/快照/版本增长政策及删除后的备份恢复语义；预先确定生产容量、延迟与RPO/RTO后验收。现有保留dry-run、包迁移和小规模恢复不等于长期治理完成。
 
-第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮先回第二优先补近似不同事实的实际保存门，泛化真实提取仍未验收；本轮第三优先已完成pending增量/read-before-use的有限工作门，并列完剩余资源上限即止；后续工作需从原产品优先级选择一个明确缺口，仍无真实模型、凭据、生活库、部署或合并授权。
+第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮先回第二优先补近似不同事实的实际保存门，泛化真实提取仍未验收；本轮第三优先已完成pending/read-before-use与派生support/trace输入门，到此停止扩展工作量门，回到原产品里程碑；原第二优先泛化真实提取需新的评测与模型授权，原第四优先生产部署与恢复需独立授权，仍无真实模型、凭据、生活库、部署或合并授权。

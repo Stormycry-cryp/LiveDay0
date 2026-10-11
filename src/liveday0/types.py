@@ -55,6 +55,7 @@ class RecallOptions:
     source_reference_limit: int = 256
     pending_delta_limit: int = 128
     catch_up_target_limit: int = 8
+    derived_input_limit: int = 256
     simulate_vector_timeout: bool = False
     query_embedding: tuple[float, ...] | None = None
 
@@ -64,6 +65,7 @@ class RecallOptions:
             ('context_byte_limit', 1_048_576), ('expansion_byte_limit', 1_048_576),
             ('source_reference_limit', 4096),
             ('pending_delta_limit', 4096), ('catch_up_target_limit', 32),
+            ('derived_input_limit', 4096),
             ('timeout_ms', 10_000), ('candidate_limit', 512),
             ('relation_limit', 512), ('final_limit', 512), ('per_relation_family_limit', 512),
         ):

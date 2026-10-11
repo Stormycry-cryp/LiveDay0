@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "base_commit": "d3786f2320244f0901587b0844ad3fa65175d9ed",
+  "defaults": {"derived_input_limit": 256, "maximum": 4096},
+  "events": [
+    {"key": "walk_a", "cue": "合成节律散步", "result": "上午散步"},
+    {"key": "walk_b", "cue": "合成节律散步", "result": "傍晚散步"},
+    {"key": "other", "cue": "独立阅读经历", "result": "安静阅读"}
+  ],
+  "projection": {"key": "rhythm", "type": "life_thread", "support": ["walk_a", "walk_b"], "counterevidence": ["other"], "cue": "合成节律散步", "uncertainty": "仅三个合成事件支持，含独立反例"},
+  "traces": [
+    {"key": "trace_a", "observation": "合成普通片段甲", "boundary": "只观察当时片段甲", "events": ["walk_a", "walk_b"]},
+    {"key": "trace_b", "observation": "合成普通片段乙", "boundary": "只观察当时片段乙", "events": ["walk_a"]},
+    {"key": "trace_c", "observation": "合成普通片段丙", "boundary": "只观察当时片段丙", "events": ["walk_b"]}
+  ],
+  "expectations": [
+    "One finite recall cycle shares a derived row allowance across projection-support reference slots and distinct trace rows; SQL returns at most remaining+1 sentinel before assembly.",
+    "Three projection support slots (including counterevidence) with cap2 reject before trace fetch, no partial context or new snapshot; cap3 plus trace3 overflows shared allowance, cap5 rejects and cap6 returns all supports and all3 trace source identities/observations/boundaries.",
+    "Same trace linked to two selected events remains one distinct trace row, preserving original canonical deduplication and not consuming two slots.",
+    "Irrelevant query with cap1 returns empty history and loads no support/trace payload rows.",
+    "Recall rejection leaves evidence, traces, relations, canonical and projection versions, supports and maintenance jobs unchanged. A new finite larger allowance recovers without deletion or truncation.",
+    "Actual SQL failure after reading supports leaves no snapshot or memory mutation; restore query path and cap6 succeeds.",
+    "Known invalid projection and deleted trace are excluded under existing lifecycle gates; old pinned snapshot remains invalid and cannot revive removed material.",
+    "CLI exit2 static recall_work_limit_exceeded/derived_input_limit with context_available=false; no partial provenance/body. Invalid options and nested-cycle catch/reentry do not reset allowance or bypass sealed failure.",
+    "This input gate does not cap SQL scans, single-row bytes, mention aggregation, global unsafe IDs, maintenance invalidation fanout or persistent growth. Do not expand this task into those gates."
+  ]
+}

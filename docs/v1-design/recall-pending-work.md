@@ -37,3 +37,5 @@
 | 持久增长与运营 | 显式snapshot release/保留dry-run、小规模合成恢复已有证据 | journal、来源、版本、快照与任务累计存储/保留容量、自动清理及生产恢复RPO/RTO仍未封顶或验收 |
 
 结论是本轮 pending/read-before-use 缺口关闭，完整长历史资源合同仍部分开放。小样本 GREEN 不证明生产容量、中文同义泛化、人物/关系长期质量或真实模型提取质量；旧一次合成真实调用的 mismatch 标记不变。
+
+后续仅补[派生support/trace输入门](recall-derived-input.md)：一次周期共享256行，溢出整次拒绝，完整出处在新较大有限额度下恢复。闭合表中的其他SQL、字节、mention/维护扇出与持久增长边界不变，随后回到原产品里程碑。

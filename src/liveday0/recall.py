@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded, RecallWorkLimitExceeded
-from liveday0.recall_limits import check_deadline, recall_json, wire_bytes, pending_delta_fetch_limit, consume_pending_deltas
+from liveday0.recall_limits import check_deadline, recall_json, wire_bytes, pending_delta_fetch_limit, consume_pending_deltas, derived_input_fetch_limit, consume_derived_inputs
 from liveday0.types import RecallOptions
 
 
@@ -406,31 +406,47 @@ class RecallCompiler:
         rows = conn.execute(
             """
             SELECT p.*, pv.body,
-              array_remove(array_agg(ps.card_id), NULL) AS support_ids
+              EXISTS(SELECT 1 FROM projection_supports ps
+                WHERE ps.tenant_id=p.tenant_id AND ps.projection_id=p.id
+                  AND ps.card_id=ANY(%s::uuid[])) AS selected_support,
+              EXISTS(SELECT 1 FROM projection_supports ps
+                WHERE ps.tenant_id=p.tenant_id AND ps.projection_id=p.id
+                  AND ps.card_id=ANY(%s::uuid[])) AS unsafe_support
             FROM projections p
             JOIN projection_versions pv
               ON pv.tenant_id=p.tenant_id AND pv.projection_id=p.id AND pv.version=p.current_version
-            LEFT JOIN projection_supports ps
-              ON ps.tenant_id=p.tenant_id AND ps.projection_id=p.id
             WHERE p.tenant_id=%s AND p.lifecycle='active'
-            GROUP BY p.id, pv.body
-            ORDER BY p.updated_at DESC
+            ORDER BY p.updated_at DESC,p.id
             LIMIT %s
             """,
-            (self.tenant_id, options.relation_limit),
+            (sorted(selected_card_ids), sorted(unsafe_ids), self.tenant_id, options.relation_limit),
         ).fetchall()
-        output = []
+        selected = []
         family_counts: dict[str, int] = {}
         for row in rows:
-            support_ids = set(row["support_ids"] or [])
-            if support_ids & unsafe_ids:
+            if row['unsafe_support']:
                 continue
-            if not (support_ids & selected_card_ids) and self._relevance(query, row["body"]) <= 0:
+            if not row['selected_support'] and self._relevance(query, row["body"]) <= 0:
                 continue
             family = row["projection_type"]
             if family_counts.get(family, 0) >= options.per_relation_family_limit:
                 continue
             family_counts[family] = family_counts.get(family, 0) + 1
+            selected.append(row)
+        if not selected:
+            return []
+        supports = conn.execute(
+            """SELECT projection_id,card_id,support_role FROM projection_supports
+            WHERE tenant_id=%s AND projection_id=ANY(%s)
+            ORDER BY projection_id,card_id,support_role LIMIT %s""",
+            (self.tenant_id, [row['id'] for row in selected], derived_input_fetch_limit()),
+        ).fetchall()
+        consume_derived_inputs(len(supports))
+        support_map = {}
+        for support in supports:
+            support_map.setdefault(support['projection_id'], set()).add(support['card_id'])
+        output = []
+        for row in selected:
             output.append(
                 {
                     "id": row["id"],
@@ -441,7 +457,7 @@ class RecallCompiler:
                     "scope": row["scope"],
                     "version": row["current_version"],
                     "body": row["body"],
-                    "support_refs": list(support_ids),
+                    "support_refs": sorted(support_map.get(row['id'], set())),
                 }
             )
         return output
@@ -518,10 +534,11 @@ class RecallCompiler:
               ON lt.tenant_id=r.tenant_id AND r.from_kind='life_trace' AND lt.id=r.from_id
             WHERE r.tenant_id=%s AND r.to_kind='semantic_card' AND r.to_id = ANY(%s)
               AND r.lifecycle='active' AND lt.lifecycle='active'
-            ORDER BY lt.id
+            ORDER BY lt.id LIMIT %s
             """,
-            (self.tenant_id, selected_card_ids),
+            (self.tenant_id, selected_card_ids, derived_input_fetch_limit()),
         ).fetchall()
+        consume_derived_inputs(len(rows))
         if not rows:
             return None
         identity_material = ":".join(sorted(str(row["id"]) for row in rows))

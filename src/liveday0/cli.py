@@ -83,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     recall.add_argument("--source-refs", type=int, default=256)
     recall.add_argument("--pending-deltas", type=int, default=128)
     recall.add_argument("--catch-up-targets", type=int, default=8)
+    recall.add_argument("--derived-inputs", type=int, default=256)
 
     expand = sub.add_parser("expand-snapshot", help="read one complete bounded pinned card")
     expand.add_argument("tenant_id")
@@ -162,6 +163,7 @@ def main(argv: list[str] | None = None) -> None:
                         source_reference_limit=args.source_refs,
                         pending_delta_limit=args.pending_deltas,
                         catch_up_target_limit=args.catch_up_targets,
+                        derived_input_limit=args.derived_inputs,
                         timeout_ms=args.timeout_ms))
             else:
                 result = service.expand_snapshot(UUID(args.snapshot_id), UUID(args.item_id),
