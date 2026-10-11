@@ -76,6 +76,10 @@ def build_parser() -> argparse.ArgumentParser:
     recall.add_argument("--current-evidence", action="append", default=[])
     recall.add_argument("--simulate-vector-timeout", action="store_true")
 
+    release = sub.add_parser("release-snapshot", help="explicitly end one pinned recall cycle")
+    release.add_argument("tenant_id")
+    release.add_argument("snapshot_id")
+
     correct = sub.add_parser("correct", help="append correction evidence and replace one canonical card")
     correct.add_argument("tenant_id")
     correct.add_argument("card_id")
@@ -148,6 +152,8 @@ def main(argv: list[str] | None = None) -> None:
             expected_version=payload["expected_version"],
             lifecycle=payload.get("lifecycle", "active"),
         )
+    elif args.command == "release-snapshot":
+        result = service.release_snapshot(UUID(args.snapshot_id))
     elif args.command == "delete":
         object_id = UUID(args.object_id)
         if args.object_kind == "evidence":

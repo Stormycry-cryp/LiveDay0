@@ -882,6 +882,9 @@ class MemoryService:
     def expand_snapshot(self, snapshot_id: UUID, item_id: UUID) -> dict[str, Any]:
         return self.recall_compiler.expand(snapshot_id, item_id)
 
+    def release_snapshot(self, snapshot_id: UUID) -> dict[str, Any]:
+        return self.recall_compiler.release(snapshot_id)
+
     def _get_card(self, conn, card_id: UUID, *, for_update: bool = False, allow_inactive: bool = False) -> dict[str, Any]:
         suffix = " FOR UPDATE" if for_update else ""
         row = conn.execute(

@@ -23,9 +23,9 @@ uv run liveday0 retention "$TENANT_ID" --dry-run \
 | 未完与失败任务 | pending/running/retry/waiting、所有 dead 和任何失败历史均保护，不重置次数、不复活任务 |
 | 来源与生活记忆 | evidence、普通痕迹、规范卡片与版本、pending delta journal、派生支持、来源回执和内容无关删除标记均不参与此策略 |
 
-active 快照的退出机制仍未实现，因此活跃快照增长会继续被保护并触发行数提示；本预览没有解决这部分增长。来源删除和纠正已经使旧快照失效/擦除的规则保持不变，不能以年龄窗口代替删除语义；防复活标记也不能因变老而清除。候选只是一次观察，未来若实现清理，必须在写门禁内重新校验当前状态、时间和调度锚点，不能盲用这里保存的 ID。
+调用者可在推理与展开周期确实结束后显式释放对应快照，见下文。尚未释放的 active 快照继续被保护；没有默认超时、自动清理或硬上限。来源删除和纠正已经使旧快照失效/擦除的规则保持不变，不能以年龄窗口代替删除语义；防复活标记也不能因变老而清除。候选只是一次观察，未来若实现清理，必须在写门禁内重新校验当前状态、时间和调度锚点，不能盲用这里保存的 ID。
 
-命令强制 `--dry-run`，没有 apply/delete/expire 入口。这次没有对真实或已有库执行清理，没有改变用户记忆保留期，也没有引入新表、迁移、调度框架或存储。历史任务即使满足候选条件也不会在本次预览中删除。
+`retention` 命令强制 `--dry-run`，没有 apply/delete/expire 入口。这次没有对真实或已有库执行清理，没有改变用户记忆保留期，也没有引入新表、迁移、调度框架或存储。历史任务即使满足候选条件也不会在本次预览中删除。
 
 本机已有 Python 3.13、psycopg 和 `/opt/homebrew/opt/postgresql@17/bin` 时，可运行单项合成验收：
 
@@ -34,3 +34,18 @@ uv run --python 3.13 --no-sync python tests/test_retention_preview.py
 ```
 
 验收新建标记空库、私有 Unix socket、无 TCP；owner 只初始化/迁移，固定合成夹具及预览使用非超管、无 BYPASSRLS/建库/建角色/继承权限的应用登录。覆盖无配置零候选、已知/未知失效时间、活跃状态、失败历史、锁/等待痕迹、最新任务与同时间 UUID 排序、年龄窗口、样例上限、两租户隔离、没有 apply 入口。两租户相关 17 张表在预览前后摘要一致；退出停止新实例，保留 `/tmp/ld0-retention-*` 中的 manifest 和日志。既有删除/幂等/重启测试未重复运行。
+
+
+## 显式结束一个召回周期
+
+```bash
+uv run liveday0 release-snapshot "$TENANT_ID" "$SNAPSHOT_ID"
+```
+
+内部调用为 `MemoryService.release_snapshot(snapshot_id)`。调用者只在该 pinned reasoning-and-expansion cycle 已完成后调用；不能用批量年龄规则结束仍需展开的周期。它将本租户指定 active 快照原子转为 `expired`，记录结束时间（复用 `invalidated_at`），清空 context、expansion_store、referenced_ids 和 degraded_reasons。保留快照行和 ID，便于状态追踪与后续只读保留预览。
+
+成功首次返回 `released=true`；重复或已 invalidated/expired 的调用返回 `released=false`，原状态与结束时间不变。跨租户和不存在 ID 均为 NotFound。其他 active 快照、租户生活版本、来源、规范记忆、待吸收 journal、回执和删除标记不变。释放与展开复用租户读写门禁：先展开则可完成此次读取；先释放则后续展开要求新快照。事务失败不留下半清空副本。
+
+该入口释放的是服务端操作缓存，不能撤回已交给调用者的上下文，也不删除生活记忆。下一周期重新 recall 可继续获取有效记忆。来源删除、纠正和边界变更的强制失效优先于正常结束；释放不会将 invalidated 改写为 expired。
+
+新增单项 `tests/test_release_snapshot.py` 在新标记空库、私有 socket、受限应用角色中验证真实 CLI、新周期保留、两种展开/释放锁序（通过 PostgreSQL blockers 证明）、提交前 SQL 故障回滚、幂等和租户隔离。未重复既有删除或重启验收。释放可回收快照中的缓存内容，但行仍保留；未调用释放的活跃副本、操作行数和任务历史仍没有自动增长上限，大规模统计性能也尚未验收。

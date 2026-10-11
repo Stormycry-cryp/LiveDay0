@@ -216,6 +216,25 @@ class RecallCompiler:
             )
             return self._json_safe(context)
 
+    def release(self, snapshot_id: UUID) -> dict[str, Any]:
+        """Caller has finished this pinned cycle; expire its operational copy only."""
+        with tenant_transaction(self.tenant_id) as conn:
+            snapshot = conn.execute(
+                "SELECT state FROM recall_snapshots WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, snapshot_id),
+            ).fetchone()
+            if not snapshot:
+                raise NotFound("snapshot not found in tenant")
+            if snapshot["state"] != "active":
+                return {"snapshot_id": snapshot_id, "state": snapshot["state"], "released": False}
+            conn.execute(
+                """UPDATE recall_snapshots SET state='expired',invalidated_at=now(),
+                  context='{}'::jsonb,expansion_store='{}'::jsonb,
+                  referenced_ids='{}',degraded_reasons='{}'
+                WHERE tenant_id=%s AND id=%s""", (self.tenant_id, snapshot_id),
+            )
+            return {"snapshot_id": snapshot_id, "state": "expired", "released": True}
+
     def expand(self, snapshot_id: UUID, item_id: UUID) -> dict[str, Any]:
         with tenant_transaction(self.tenant_id, mode="read") as conn:
             snapshot = conn.execute(
@@ -228,7 +247,7 @@ class RecallCompiler:
             if not snapshot:
                 raise NotFound("snapshot not found in tenant")
             if snapshot["state"] != "active":
-                raise SnapshotInvalidated("hard invalidation requires a fresh recall snapshot")
+                raise SnapshotInvalidated("invalidated or released cycle requires a fresh recall snapshot")
             item = snapshot["expansion_store"].get(str(item_id))
             if item is None:
                 raise NotFound("item is not in the pinned expansion envelope")
