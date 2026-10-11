@@ -528,10 +528,12 @@ class RecallCompiler:
             return None
         rows = conn.execute(
             """
-            SELECT DISTINCT lt.id, lt.evidence_id, lt.observation, lt.observation_boundary
+            SELECT DISTINCT lt.id, lt.evidence_id, lt.observation, lt.observation_boundary,
+                            e.occurred_at
             FROM relations r
             JOIN life_traces lt
               ON lt.tenant_id=r.tenant_id AND r.from_kind='life_trace' AND lt.id=r.from_id
+            JOIN evidence e ON e.tenant_id=lt.tenant_id AND e.id=lt.evidence_id
             WHERE r.tenant_id=%s AND r.to_kind='semantic_card' AND r.to_id = ANY(%s)
               AND r.lifecycle='active' AND lt.lifecycle='active'
             ORDER BY lt.id LIMIT %s
@@ -543,8 +545,19 @@ class RecallCompiler:
             return None
         identity_material = ":".join(sorted(str(row["id"]) for row in rows))
         summary_id = uuid4()
-        observations = sorted({row["observation"] for row in rows})
-        boundaries = sorted({row["observation_boundary"] for row in rows})
+        traces = [
+            {
+                "id": row["id"],
+                "type": "life_trace",
+                "lifecycle": "active",
+                "epistemic_state": "observed_only",
+                "evidence_id": row["evidence_id"],
+                "occurred_at": row["occurred_at"],
+                "observation": row["observation"],
+                "observation_boundary": row["observation_boundary"],
+            }
+            for row in rows
+        ]
         return {
             "id": summary_id,
             "canonical_identity": "trace_summary:" + sha256(identity_material.encode()).hexdigest()[:24],
@@ -552,8 +565,7 @@ class RecallCompiler:
             "lifecycle": "active",
             "epistemic_state": "observed_only",
             "count": len(rows),
-            "observations": observations,
-            "observation_boundaries": boundaries,
+            "traces": traces,
             "source_refs": [row["evidence_id"] for row in rows],
             "expandable": True,
         }

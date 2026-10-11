@@ -187,7 +187,13 @@ ctx,issues,rows=recall(6)
 if ctx:
     cs=items(ctx);projs=[c for c in cs if c['type']=='life_thread'];summ=[c for c in cs if c['type']=='evidence_summary']
     if len(projs)!=1 or set(projs[0]['support_refs'])!={str(i) for i in ids.values()} or projs[0]['body']['uncertainty']!=p['uncertainty'] or set(projs[0]['body']['counterevidence_versions'])!={str(ids['other'])}:issues.append('projection support/counterevidence incomplete')
-    if len(summ)!=1 or summ[0]['count']!=3 or set(summ[0]['source_refs'])!={str(i) for i in source_ids.values()} or set(summ[0]['observations'])!={x['observation'] for x in fixture['traces']} or set(summ[0]['observation_boundaries'])!={x['boundary'] for x in fixture['traces']}:issues.append('trace identity/provenance/qualifier incomplete or duplicated')
+    if len(summ)!=1 or summ[0]['count']!=3 or set(summ[0]['source_refs'])!={str(i) for i in source_ids.values()}:issues.append('trace identity/provenance incomplete or duplicated')
+    elif {r['id'] for r in summ[0]['traces']}!={str(i) for i in traces.values()}:issues.append('trace identity incomplete or duplicated')
+    else:
+        records={r['id']:r for r in summ[0]['traces']}
+        for item in fixture['traces']:
+            record=records[str(traces[item['key']])]
+            if record['evidence_id']!=str(source_ids[item['key']]) or not record['occurred_at'] or record['observation']!=item['observation'] or record['observation_boundary']!=item['boundary'] or record['type']!='life_trace' or record['epistemic_state']!='observed_only' or record['lifecycle']!='active':issues.append('trace source/time/qualifier pairing incomplete')
 else:issues.append('larger finite allowance did not recover')
 if life_digest()!=initial:issues.append('success mutated life inputs')
 check('exact_full_recovery',issues,rows)

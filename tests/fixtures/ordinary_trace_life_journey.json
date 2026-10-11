@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "base_commit": "8d037266fdf76293abff07849b7cced1ad97719f",
+  "query": "公园散步",
+  "ordinary": [
+    {"key":"fragment_a","at":"2026-10-01T17:00:00+00:00","text":"今天下班绕公园回家，只是觉得风凉，还没想以后怎样。","observation":"下班经过公园，觉得风凉。","boundary":"仅这次片段；没有规律散步或后续承诺。"},
+    {"key":"fragment_b","at":"2026-10-02T19:00:00+00:00","text":"买菜回来从公园边经过，只是顺路，没有约定下次。","observation":"买菜回来从公园边经过。","boundary":"仅这次顺路；不能解释成已开始运动习惯。"}
+  ],
+  "explicit": {
+    "key":"decision","at":"2026-10-03T18:00:00+00:00","text":"前两天经过公园只是顺路。今天我明确决定下周尝试下班后公园散步，还没有实际开始，也没承诺每天去。",
+    "body":{"goal_context":"公园散步尝试","development":"后来明确想试一试散步。","causal_turn":"本次明确决定尝试，但尚未实施。","current_result":"决定下周尝试，没有开始固定习惯。","unfinished_future":"下周试一次，具体哪天未定。","boundaries":"此前片段只是背景，不据此推断稳定习惯、人格或已执行。","uncertainty":"具体日期与是否坚持仍未知。"}
+  },
+  "correction": {
+    "key":"correction","at":"2026-10-04T18:00:00+00:00","text":"更正：我只打算下周有空试一次，不是每天的承诺，也没有开始固定习惯。",
+    "body":{"goal_context":"公园散步尝试","development":"明确把尝试限定为有空的一次。","causal_turn":"收窄计划，不是每日承诺。","current_result":"只计划有空试一次，尚未开始。","unfinished_future":"下周有空时试一次，时间未定。","boundaries":"普通经过不等于习惯；没有每日承诺或已执行证据。","uncertainty":"是否有空、是否坚持未知。"}
+  },
+  "expected_journey": [
+    "Two early sources persist as ordinary traces with original dates/boundaries; no canonical event, thread or slow person view is fabricated, and unlinked traces need not force historical recall.",
+    "Later explicit material creates one canonical decision event via an existing frozen interpretation; no source duplication or rewriting of earlier trace/receipt. Context links are trusted scripted selections, not automatic association quality.",
+    "Replaying the same interpretation returns original identity with zero writes. Before linking, later event is independently supported by explicit source; earlier traces only supply revisable context.",
+    "Once linked, event and earlier ordinary context recall together. Each trace must retain its own stable ID, source ID, occurred_at, observation and boundary in one coherent record, never separate unpaired arrays.",
+    "Tiny complete-card budget omits whole trace summary with a pinned handle; full expansion preserves every trace-source-time-boundary pairing, no half trace.",
+    "Explicit correction updates same event to v2 with original/correction sources and current uncertainty/open future; earlier trace identities/bodies/receipts remain unchanged, old pinned context refuses expansion.",
+    "Deleting only first ordinary source erases its trace and context link, excludes it from new recall/old snapshots/replay, keeps second trace and independently supported corrected event.",
+    "Deleting the canonical event blocks old frozen interpretation replay and removes linked historical recall; surviving unrequested ordinary trace remains stored rather than being silently deleted. No automatic thread or semantic regeneration.",
+    "Reuse existing interpretation/revocation/SQL/tenant and budget evidence. Only synthetic fixed outputs; this does not prove a model can extract or associate the journey correctly. No domain-string rules or paid calls."
+  ]
+}

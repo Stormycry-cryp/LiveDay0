@@ -4,7 +4,7 @@
 
 | 用户想做的事 | 当前可用范围 | 仍不可用或未验收 |
 |---|---|---|
-| 留下生活经历并以后继续谈 | 已审定/固定合成提案可经候选展示、确认、受限PG保存，再召回出处；事件/事实/前瞻类型分开 | 默认入口仍固定合成提取，不能把任意自然语言可靠转成生活记忆；真实模型完整质量未通过 |
+| 留下生活经历并以后继续谈 | 已审定/固定合成提案可经候选展示、确认、受限PG保存，再召回出处；事件/事实/前瞻类型分开；普通痕迹→后来明确决定的有限旅程可运行，逐条身份/来源/时间/边界与更正删除保留 | 本旅程背景关联由脚本提供；默认入口仍固定合成提取，不能把任意自然语言可靠转成生活记忆；真实模型完整质量未通过 |
 | 换一种中文问法回想 | 本批10个固定查询证明近期候选内明确中文片段不被口语外壳稀释；旧精确强cue已有有限候选验收 | 同义理解、旧中文口语发现、长期多事件关系/人物理解和独立泛化质量未通过 |
 | 不相关时不插入往事 | 已测无关查询可空历史，保留必要显式状态/前瞻的层次 | 不能承诺所有近义、否定或共用短语都准确；词面分数不是事实或解释置信度 |
 | 不把重复讲述当多件事 | 同请求同幂等键重放一个身份，语义卡按规范身份去重 | 不同日期/陪同角色、共享provider key的三次经历在实际host保存中保持独立；不同原文的同一次经历仍未验证自动识别合并，不能据此保证自动归并质量 |
@@ -13,12 +13,12 @@
 | 每次取回有大小和时间边界 | 默认完整context16KiB/展开64KiB；整体省略/引用或静态拒绝；800ms协作式工作deadline及真实SQL取消已验 | 选中卡片的来源引用传输/装配有总256行上限，超限整次拒绝；pending与查询追平共享总128行/8预选任务，超限可重试待维护；派生support/trace共享总256输入行，超限整次拒绝可在新有限额度恢复；严格墙钟、载荷字节/全局unsafe/mention/维护扇出等全部工作量与内存硬界未过，调用方额外包装另计 |
 | 长期、多设备、多用户运行 | 核心租户门禁/RLS、受限角色、发行包迁移、小规模合成恢复及进程接续有证据；有显式快照释放和保留dry-run | 真实服务端身份/跨设备、生产RPO/RTO、长期增长治理、自动清理和生产恢复门尚未完成 |
 
-具体证据复用[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[来源引用工作门](recall-source-work.md)、[pending工作门与有限闭合表](recall-pending-work.md)、[派生support/trace输入门](recall-derived-input.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
+具体证据复用[普通痕迹连续性旅程](ordinary-trace-journey.md)、[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[来源引用工作门](recall-source-work.md)、[pending工作门与有限闭合表](recall-pending-work.md)、[派生support/trace输入门](recall-derived-input.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
 
 ## 最高优先级三项
 
 1. **完成生活输入到记忆的可靠质量门（原第二优先）。** 泛化自然文字的来源/主体、引语和假设、条件事实、普通生活痕迹与承诺；新生活材料如何形成事件/生活线索，以及人物/关系理解怎样随反证变化。先复用已有合成合同，补未验收小型生活旅程；真实模型质量需要新的明确授权与事先冻结独立评测，当前不可重试旧调用。
-2. **完成长期召回实用性与完整工作量门（原第三优先，当前继续项）。** 中文长历史/同义与重复不同表述仍开放；候选、选中来源、查询pending/追平及派生support/trace的行数门已有定向证据；载荷字节、全局unsafe/派生邻域扇出、SQL成本及持久增长的完整上限仍未完成。保持空历史、出处、边界与不确定性，先选有限真实缺口，不以四字片段或小组全绿替代泛化验收。
+2. **完成长期召回实用性与完整工作量门（原第三优先）。** 中文长历史/同义与重复不同表述仍开放；候选、选中来源、查询pending/追平及派生support/trace的行数门已有定向证据；载荷字节、全局unsafe/派生邻域扇出、SQL成本及持久增长的完整上限仍未完成。保持空历史、出处、边界与不确定性，先选有限真实缺口，不以四字片段或小组全绿替代泛化验收。
 3. **完成真实长期运行门（原第四优先）。** 服务端不可伪造的tenant身份、真实受限角色和跨设备路径；确认任务/快照/版本增长政策及删除后的备份恢复语义；预先确定生产容量、延迟与RPO/RTO后验收。现有保留dry-run、包迁移和小规模恢复不等于长期治理完成。
 
-第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮先回第二优先补近似不同事实的实际保存门，泛化真实提取仍未验收；本轮第三优先已完成pending/read-before-use与派生support/trace输入门，到此停止扩展工作量门，回到原产品里程碑；原第二优先泛化真实提取需新的评测与模型授权，原第四优先生产部署与恢复需独立授权，仍无真实模型、凭据、生活库、部署或合并授权。
+第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮回第二优先完成普通痕迹到后来明确事件的有限合成旅程，泛化真实提取仍未验收；本轮第三优先已完成pending/read-before-use与派生support/trace输入门，到此停止扩展工作量门，回到原产品里程碑；原第二优先泛化真实提取需新的评测与模型授权，原第四优先生产部署与恢复需独立授权，仍无真实模型、凭据、生活库、部署或合并授权。
