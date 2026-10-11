@@ -1,21 +1,25 @@
 {
-  "version": 2,
+  "version": 4,
   "base_manifest_sha256": "d246c704dc56abed4dc9164d23850069cb2e12733d77f6dd83fe7967ef9dd217",
   "model": "glm-5.3-flash",
   "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
   "status": "offline_candidate_not_execution_authorization",
   "files": {
-    "benchmarks/semantic_quality_preflight_v1/capture.py": "c61f756e6057cc5282dc95d5331eac3c7a883909214fb8953d74184024203db2",
-    "benchmarks/semantic_quality_preflight_v1/test_capture.py": "8bf381e1213a18be4d706f4713c5f34fddaf5c6f1a54e2e98cb46139fcaed55a",
+    "benchmarks/semantic_quality_preflight_v1/capture.py": "2431d69ce4a2c39ed0e238251bcd24361e7e8e5faf25ee3d7163bfa50d16de5f",
+    "benchmarks/semantic_quality_preflight_v1/test_capture.py": "fcf5071902614b9625075334e9c5d0faaae963f928c8bea2d9d5e6a17eff8401",
     "benchmarks/semantic_quality_preflight_v1/manifest.json": "d246c704dc56abed4dc9164d23850069cb2e12733d77f6dd83fe7967ef9dd217",
-    "benchmarks/semantic_quality_preflight_v1/README-CAPTURE.md": "304a040901b17ec4ab299ae9c0f067f1d97505701f78e4cf9ce4a00857005946",
-    "benchmarks/semantic_quality_preflight_v1/README.md": "febaf2392ba3198ecadd4ae4ddbc8e029fd32e553560d5c4c089c0ed64919cc4",
-    "docs/v1-design/user-capability-status.md": "49e2402c16e37e6d456f2ce780e66cb19ea7b484848919a83be3ebca59598e1e",
-    "benchmarks/semantic_quality_preflight_v1/test_credentials.py": "190c89f0a2cf780edaeff216596c7b15846477d78ab801eb7d2cb6e826405da8"
+    "benchmarks/semantic_quality_preflight_v1/README-CAPTURE.md": "4a9ac788ecbbca479fd500c8f7b79e73940639b5713d397d895a0d3de523343b",
+    "benchmarks/semantic_quality_preflight_v1/README.md": "dc215cea98b54cf068b0745e6ca47aaa516451840085cce40e2f06a62114f4f6",
+    "docs/v1-design/user-capability-status.md": "341ce397fe27d7d4e43a64f9bcf8e674acfe1c7dcb2e175f3d8084e22a71483b",
+    "benchmarks/semantic_quality_preflight_v1/test_credentials.py": "eec9b441f757bd244f0d345a355af27a3669033562e2e3e45d53a28e950b6f89",
+    "benchmarks/semantic_quality_preflight_v1/test_limits_removed.py": "7d5a501cdc4155cc3bda0b9393e2afe5bd509a3411dd5b43082cb5b6fe2c84f7"
   },
-  "attempt_limit": 12,
-  "retry_limit": 0,
-  "reserve_per_attempt_cny": "1.2058624",
-  "max_authorizable_local_reservation_cny": "15",
-  "credential_mode": "human_tty_explicit_private_file_or_hidden_input"
+  "evaluation_case_count": 12,
+  "evaluation_scope": "frozen_case_ids_completed_once_then_finish",
+  "user_request_cap": null,
+  "user_cny_cap": null,
+  "codex_week_stop_percent": null,
+  "automatic_requests_enabled": false,
+  "retry_policy": "no_automatic_retry_failure_or_unknown_requires_review",
+  "estimated_per_case_cny": "1.2058624"
 }

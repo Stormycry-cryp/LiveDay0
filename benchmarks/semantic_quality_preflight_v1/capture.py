@@ -19,6 +19,7 @@ import subprocess
 import sys
 import types
 import warnings
+from threading import Lock
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
@@ -186,39 +187,51 @@ def timestamp(value):
     return dt
 
 
-def authorization(release_sha, review_path, grant_path, quota_path, price_path):
+def authorization(release_sha, review_path, grant_path, price_path):
     """Trusted-operator artifacts, not cryptographic authorization credentials."""
     _, review = read(review_path, 4096)
     grant_raw, grant = read(grant_path, 4096)
-    _, quota = read(quota_path, 4096)
     _, price = read(price_path, 4096)
     scope = {'capture_manifest_sha256': release_sha, 'model': MODEL, 'endpoint': ENDPOINT}
     if review != {**scope, 'scope': 'code_review_only'}:
         fail('code_review_required')
-    if (set(grant) != set(scope) | {'scope', 'max_attempts', 'max_cny', 'retain_fictional_captures', 'expires_utc'}
+    if (set(grant) != set(scope) | {'scope', 'case_ids', 'retain_fictional_captures', 'expires_utc'}
             or any(grant.get(k) != v for k, v in scope.items())
-            or grant['scope'] != 'new_fictional_evaluation_only' or type(grant['max_attempts']) is not int
-            or grant['max_attempts'] != 12 or grant['retain_fictional_captures'] is not True):
+            or grant['scope'] != 'new_fictional_evaluation_only'
+            or type(grant['case_ids']) is not list or grant['case_ids'] != list(ORDER)
+            or grant['retain_fictional_captures'] is not True):
         fail('new_execution_authorization_required')
-    cap = Decimal(grant['max_cny'])
     now = datetime.now(timezone.utc)
-    if not cap.is_finite() or not RESERVE <= cap <= Decimal('15') or timestamp(grant['expires_utc']) <= now:
-        fail('grant_expired_or_budget_invalid')
-    for artifact in (quota, price):
-        if any(artifact.get(k) != v for k, v in {**scope, 'max_cny': grant['max_cny']}.items()):
-            fail('preflight_scope_mismatch')
-    age = (now - timestamp(quota['read_utc'])).total_seconds()
-    if (quota.get('source') != 'codex_official_get_usage_limits' or quota.get('window_mins') != 10080
-            or type(quota.get('remaining_percent')) not in (int, float)
-            or not 50 < quota['remaining_percent'] <= 100 or not 0 <= age <= 300):
-        fail('official_week_unreadable_stale_or_stop_line')
+    if timestamp(grant['expires_utc']) <= now:
+        fail('grant_expired')
+    if any(price.get(k) != v for k, v in scope.items()):
+        fail('preflight_scope_mismatch')
     price_age = (now - timestamp(price['read_utc'])).total_seconds()
     if (price.get('source') != 'https://docs.bigmodel.cn/cn/guide/start/pricing'
             or price.get('input_cny_per_million') != '0.8' or price.get('output_cny_per_million') != '2.8'
             or price.get('cache_storage_free') is not True or price.get('operator_verified') is not True
             or not 0 <= price_age <= 86400):
         fail('current_price_unverifiable_or_changed')
-    return sha(grant_raw), cap
+    return sha(grant_raw)
+
+
+def call_accounting(glm):
+    """Reuse frozen usage validation; one-send accounting has no CNY ceiling."""
+    class CaptureAccounting(glm.GLMCallBudget):
+        def __init__(self):
+            self._entry, self._lock = None, Lock()
+
+        def reserve(self):
+            with self._lock:
+                if self._entry is not None:
+                    raise glm.ProviderFailure('duplicate_call')
+                self._entry = {'status':'reserved', 'input_tokens':None, 'output_tokens':None}
+
+        def snapshot(self):
+            value = super().snapshot()
+            value['estimated_cny'] = value.pop('reserved_cny')
+            return value
+    return CaptureAccounting()
 
 
 def stopped(state, code):
@@ -228,10 +241,10 @@ def stopped(state, code):
 
 
 class Ledger:
-    def __init__(self, state, release_sha, grant_sha, cap, fixture):
-        self.state, self.release, self.cap, self.fixture = Path(state), release_sha, cap, fixture
+    def __init__(self, state, release_sha, grant_sha, fixture):
+        self.state, self.release, self.fixture = Path(state), release_sha, fixture
         expected = {'capture_manifest_sha256': release_sha, 'grant_sha256': grant_sha,
-                    'max_cny': str(cap), 'mode': 'fixture' if fixture else 'real', 'max_attempts': 12}
+                    'mode': 'fixture' if fixture else 'real', 'case_ids': list(ORDER)}
         witness = self.state.with_name(self.state.name + '-started.json')
         if not self.state.exists() and witness.exists():
             fail('deleted_state_not_a_new_run')
@@ -259,7 +272,7 @@ class Ledger:
                 fail('run_permanently_stopped')
             self.attempts = sorted(self.state.glob('attempt-*'))
             reservations = sorted(self.state.glob('reserved-*.json'))
-            if len(self.attempts) > 12 or len(reservations) != len(self.attempts):
+            if len(self.attempts) > len(ORDER) or len(reservations) != len(self.attempts):
                 stopped(self.state, 'ledger_unverifiable')
             for i, path in enumerate(self.attempts):
                 if path.name != 'attempt-%02d' % (i + 1) or path.is_symlink():
@@ -267,7 +280,7 @@ class Ledger:
                 _, a = read(path / 'attempt.json')
                 if read(self.state / ('reserved-%02d.json' % (i+1)))[1] != a:
                     stopped(self.state, 'ledger_unverifiable')
-                if a.get('case_id') != ORDER[i] or a.get('reserved_cny') != str(RESERVE) or a.get('capture_manifest_sha256') != release_sha:
+                if a.get('case_id') != ORDER[i] or a.get('estimated_cny') != str(RESERVE) or a.get('capture_manifest_sha256') != release_sha:
                     stopped(self.state, 'ledger_unverifiable')
                 if not (path / 'result.json').is_file():
                     stopped(self.state, 'interrupted_or_unknown')
@@ -294,14 +307,14 @@ class Ledger:
         if (self.state / 'STOP.json').exists():
             fail('run_permanently_stopped')
         n = len(self.attempts)
-        if n == 12 or RESERVE * (n + 1) > self.cap:
-            stopped(self.state, 'attempt_or_reservation_limit')
+        if n == len(ORDER):
+            fail('evaluation_cases_complete')
         path = self.state / ('attempt-%02d' % (n + 1))
         path.mkdir(mode=0o700)  # O_EXCL directory claim, never recycle a case.
         sync_dir(self.state)
         value = {'capture_manifest_sha256': self.release,
             'case_id': case['id'], 'split': case['split'], 'request_sha256': payload_sha,
-            'reserved_cny': str(RESERVE), 'status': 'reserved', 'fixture': self.fixture}
+            'estimated_cny': str(RESERVE), 'status': 'reserved', 'fixture': self.fixture}
         exclusive(path / 'attempt.json', value)
         exclusive(self.state / ('reserved-%02d.json' % (n+1)), value)
         return path
@@ -361,28 +374,26 @@ def human_gate(ledger, split, report_path, review_path):
     exclusive(gate / 'accepted.json', {'status': 'human_prefix_pass', 'fixture': ledger.fixture})
 
 
-def capture_next(state, release_sha, cases, c, glm, local, *, grant_sha, cap,
+def capture_next(state, release_sha, cases, c, glm, local, *, grant_sha,
                  fixture_port=None, report=None, review=None, credential_reader=None, timeout=15,
                  pre_send_check=None):
     fixture = fixture_port is not None
     if fixture and (type(fixture_port) is not int or not 1 <= fixture_port <= 65535
                     or Path(state).resolve().is_relative_to(TASK.resolve())):
         fail('fixture_state_or_port_invalid')
-    ledger = Ledger(state, release_sha, grant_sha, cap, fixture)
+    ledger = Ledger(state, release_sha, grant_sha, fixture)
     attempt = None
     try:
         n = len(ledger.attempts)
-        if n == 12:
-            fail('all_attempts_consumed')
+        if n == len(ORDER):
+            fail('evaluation_cases_complete')
         if n:
             human_gate(ledger, 'development' if n <= 6 else 'heldout', report, review)
-        if RESERVE * (n+1) > ledger.cap:
-            stopped(ledger.state, 'attempt_or_reservation_limit')
         case = cases[n]
         request = c.ExtractionRequest.build('quality-v1:' + case['id'], 'v1', case['content'],
                                              case['occurred_at'], max_proposals=1)
         # Key input belongs exclusively to a future human terminal, after all
-        # code/grant/quota/price/human gates. The CLI carries only a path,
+        # code/grant/price/human gates. The CLI carries only a path,
         # never the key; file reading requires explicit human opt-in.
         if fixture:
             transport = glm.GLMHTTP(fixture_port=fixture_port, timeout=timeout)
@@ -413,8 +424,8 @@ def capture_next(state, release_sha, cases, c, glm, local, *, grant_sha, cap,
                 stopped(ledger.state, 'send_scope_changed')
             attempt = ledger.claim(case, check.payload_sha256)
             return check
-        budget = glm.GLMCallBudget(max_cny=Decimal('1.25'))
-        adapter = glm.GLMCNAdapter(transport=Recording(), budget=budget, purpose='capture_new', authorize_send=authorize)
+        accounting = call_accounting(glm)
+        adapter = glm.GLMCNAdapter(transport=Recording(), budget=accounting, purpose='capture_new', authorize_send=authorize)
         local.validate_and_gate(request, adapter)
         # Retain only the complete fields consumed by the validator. Never
         # store response headers, reasoning, unknown fields or exceptions.
@@ -426,9 +437,9 @@ def capture_next(state, release_sha, cases, c, glm, local, *, grant_sha, cap,
                    'finish_reason':choice['finish_reason'], 'message':{'role':'assistant', 'content':choice['message']['content']}}]}}
         exclusive(attempt / 'capture.json', row)
         exclusive(attempt / 'result.json', {'status':'captured', 'capture_sha256':sha(encode(row)),
-            'budget':budget.snapshot(), 'semantic_quality':'unjudged', 'fixture':fixture, 'retry_authorized':False})
+            'usage_accounting':accounting.snapshot(), 'semantic_quality':'unjudged', 'fixture':fixture, 'retry_authorized':False})
         return {'status':'captured_needs_human_review', 'case_id':case['id'], 'fixture':fixture,
-                'attempts':n+1, 'reserved_cny':str(RESERVE*(n+1)), 'provider_bill_verified':False}
+                'attempts':n+1, 'estimated_cny':str(RESERVE*(n+1)), 'provider_bill_verified':False}
     except BaseException:
         if attempt is not None:
             # Even KeyboardInterrupt, validator/usage failure and unknown local
@@ -447,7 +458,7 @@ def main():
     p.add_argument('command', choices=['preview', 'captures', 'finalize', 'stop', 'execute'])
     p.add_argument('--split', choices=['development','heldout'], default='development')
     p.add_argument('--out'); p.add_argument('--report'); p.add_argument('--review')
-    p.add_argument('--code-review'); p.add_argument('--grant'); p.add_argument('--quota'); p.add_argument('--price')
+    p.add_argument('--code-review'); p.add_argument('--grant'); p.add_argument('--price')
     p.add_argument('--credentials-file', help='Explicit private JSON path; human execute only, no fallback')
     args = p.parse_args()
     if args.credentials_file is not None and args.command != 'execute':
@@ -460,8 +471,9 @@ def main():
         raise
     if args.command == 'preview':
         print(json.dumps({'capture_manifest_sha256':release, 'base_manifest_sha256':BASE_SHA,
-            'model':MODEL, 'endpoint':ENDPOINT, 'case_ids':ORDER, 'max_attempts':12,
-            'reserve_per_attempt_cny':str(RESERVE), 'reserve_all12_cny':str(RESERVE*12),
+            'model':MODEL, 'endpoint':ENDPOINT, 'case_ids':ORDER, 'evaluation_case_count':len(ORDER),
+            'estimated_per_case_cny':str(RESERVE), 'estimated_all_cases_cny':str(RESERVE*len(ORDER)),
+            'user_request_cap':None, 'user_cny_cap':None, 'codex_week_stop_percent':None,
             'real_calls':0, 'execution_authorized':False}))
         return
     if args.command == 'stop':
@@ -470,9 +482,9 @@ def main():
         stopped(REAL_STATE, 'human_stop')
     if args.command == 'finalize':
         _, plan = read(REAL_STATE / 'plan.json')
-        ledger = Ledger(REAL_STATE,release,plan['grant_sha256'],Decimal(plan['max_cny']),False)
+        ledger = Ledger(REAL_STATE,release,plan['grant_sha256'],False)
         try:
-            if len(ledger.attempts) != 12:
+            if len(ledger.attempts) != len(ORDER):
                 fail('all12_captured_required')
             human_gate(ledger,'heldout',args.report,args.review)
             exclusive(REAL_STATE / 'COMPLETE.json', {'status':'human_extraction_preflight_complete',
@@ -498,18 +510,18 @@ def main():
         print(json.dumps({'status':'captures_exported','cases':len(rows),'real_calls':0}))
         return
     try:
-        if any(x is None for x in (args.code_review,args.grant,args.quota,args.price)):
-            fail('new_review_grant_quota_price_required')
-        grant_sha, cap = authorization(release,args.code_review,args.grant,args.quota,args.price)
+        if any(x is None for x in (args.code_review,args.grant,args.price)):
+            fail('new_review_grant_price_required')
+        grant_sha = authorization(release,args.code_review,args.grant,args.price)
         def fresh_pre_send():
-            if frozen()[0] != release or authorization(release,args.code_review,args.grant,args.quota,args.price) != (grant_sha, cap):
+            if frozen()[0] != release or authorization(release,args.code_review,args.grant,args.price) != grant_sha:
                 stopped(REAL_STATE, 'pre_send_scope_changed')
         print(json.dumps(capture_next(REAL_STATE,release,cases,c,glm,local,grant_sha=grant_sha,
-            cap=cap,report=args.report,review=args.review,credential_reader=credential_reader_for(args.credentials_file),
+            report=args.report,review=args.review,credential_reader=credential_reader_for(args.credentials_file),
             pre_send_check=fresh_pre_send)))
     except BaseException as exc:
         waiting = isinstance(exc, Stop) and exc.args[0] in {
-            'previous_case_human_review_required', 'human_review_incomplete_waiting', 'all_attempts_consumed'}
+            'previous_case_human_review_required', 'human_review_incomplete_waiting', 'evaluation_cases_complete'}
         if not waiting:
             seal_existing_real_state()
         raise

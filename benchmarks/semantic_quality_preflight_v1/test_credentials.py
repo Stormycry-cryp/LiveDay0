@@ -138,7 +138,7 @@ class CredentialTests(unittest.TestCase):
                 with self.assertRaises(entry.Stop):
                     entry.main()
         with patch.object(sys, 'argv', ['capture.py', 'execute', '--credentials-file', str(self.path),
-                                       '--code-review', 'review', '--grant', 'grant', '--quota', 'quota', '--price', 'price']), \
+                                       '--code-review', 'review', '--grant', 'grant', '--price', 'price']), \
                 patch.object(entry, 'frozen', return_value=('release', [], None, None, None)), \
                 patch.object(entry, 'authorization', side_effect=entry.Stop('blocked_preflight')), \
                 patch.object(entry, 'seal_existing_real_state') as seal, \
@@ -149,14 +149,14 @@ class CredentialTests(unittest.TestCase):
             seal.assert_called_once_with()
 
     def test_human_and_tty_gates_before_reader_or_transport(self):
-        ledger = types.SimpleNamespace(attempts=[], cap=Decimal('15'), close=lambda: None)
+        ledger = types.SimpleNamespace(attempts=[], close=lambda: None)
         contract = types.SimpleNamespace(ExtractionRequest=types.SimpleNamespace(build=lambda *a, **kw: None))
         glm = types.SimpleNamespace(GLMHTTP=lambda **kw: (_ for _ in ()).throw(AssertionError('transport forbidden')))
         cases = [{'id': 'd01', 'content': 'fictional', 'occurred_at': '2026-01-01T00:00:00Z'}]
         with patch.object(entry, 'Ledger', return_value=ledger), patch.object(sys.stdin, 'isatty', return_value=False), \
                 patch.object(entry, 'private_credential', side_effect=AssertionError('reader forbidden')):
             with self.assertRaises(entry.Stop) as caught:
-                entry.capture_next(self.root, 'r', cases, contract, glm, None, grant_sha='g', cap=Decimal('15'),
+                entry.capture_next(self.root, 'r', cases, contract, glm, None, grant_sha='g',
                                    credential_reader=entry.credential_reader_for(self.path))
             self.assertEqual(caught.exception.args, ('human_terminal_required',))
         ledger.attempts = [object()]
@@ -164,7 +164,7 @@ class CredentialTests(unittest.TestCase):
                 patch.object(entry, 'human_gate', side_effect=entry.Stop('human_gate_waiting')), \
                 patch.object(entry, 'private_credential', side_effect=AssertionError('reader forbidden')):
             with self.assertRaises(entry.Stop) as caught:
-                entry.capture_next(self.root, 'r', cases, contract, glm, None, grant_sha='g', cap=Decimal('15'),
+                entry.capture_next(self.root, 'r', cases, contract, glm, None, grant_sha='g',
                                    credential_reader=entry.credential_reader_for(self.path))
             self.assertEqual(caught.exception.args, ('human_gate_waiting',))
 

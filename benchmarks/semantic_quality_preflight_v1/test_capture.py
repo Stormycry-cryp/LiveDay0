@@ -94,16 +94,16 @@ class CaptureTests(unittest.TestCase):
                 'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps({'proposals':[p]},ensure_ascii=False),
                 'reasoning_content':'PRIVATE_PROVIDER_DETAIL'}}], 'unrecognized':'PRIVATE_PROVIDER_DETAIL'}
 
-    def run_next(self, report=None, review=None, cap=Decimal('15'), timeout=1):
+    def run_next(self, report=None, review=None, timeout=1):
         return entry.capture_next(self.state,self.release,self.cases,self.c,self.glm,self.local,
-            grant_sha='fixture_not_authorization',cap=cap,fixture_port=self.server.server_port,
+            grant_sha='fixture_not_authorization',fixture_port=self.server.server_port,
             report=report,review=review,timeout=timeout)
 
-    def ledger(self, cap=Decimal('15')):
-        return entry.Ledger(self.state,self.release,'fixture_not_authorization',cap,True)
+    def ledger(self):
+        return entry.Ledger(self.state,self.release,'fixture_not_authorization',True)
 
-    def review(self, split='development', verdict='pass', forge=False, cap=Decimal('15')):
-        with_context=self.ledger(cap)
+    def review(self, split='development', verdict='pass', forge=False):
+        with_context=self.ledger()
         try: rows=with_context.captures(split)
         finally: with_context.close()
         folder=self.root / ('review-'+str(len(list(self.root.glob('review-*')))))
@@ -148,7 +148,7 @@ class CaptureTests(unittest.TestCase):
         try: entry.human_gate(ledger,'heldout',report,review)
         finally: ledger.close()
         self.assertEqual(len(self.posts),12)
-        self.assertEqual(result['reserved_cny'],'14.4703488')
+        self.assertEqual(result['estimated_cny'],'14.4703488')
         with self.assertRaises(entry.Stop): self.run_next(report,review)
         self.assertEqual(len(self.posts),12)
         for p in self.state.rglob('*'):
@@ -241,36 +241,37 @@ class CaptureTests(unittest.TestCase):
         with self.assertRaisesRegex(entry.Stop,'capture_changed'): self.run_next()
         self.assertEqual(len(self.posts),1);self.assert_stopped()
 
-    def test_budget_no_new_process_reset(self):
-        cap=entry.RESERVE
-        self.run_next(cap=cap)
-        # Missing review cannot bypass the global cap. Reopening state with a
-        # different cap/grant is also forbidden, even in a new process.
-        with self.assertRaisesRegex(entry.Stop,'state_scope_mismatch'): self.run_next(cap=Decimal('15'))
+    def test_scope_no_new_process_reset(self):
+        self.run_next()
+        with self.assertRaisesRegex(entry.Stop,'state_scope_mismatch'):
+            entry.Ledger(self.state,self.release,'different_grant',True)
         self.assertEqual(len(self.posts),1);self.assert_stopped()
 
     def test_authorization_artifacts_no_transport(self):
         now=datetime.now(timezone.utc)
         scope={'capture_manifest_sha256':self.release,'model':entry.MODEL,'endpoint':entry.ENDPOINT}
         docs=[{**scope,'scope':'code_review_only'},
-              {**scope,'scope':'new_fictional_evaluation_only','max_attempts':12,'max_cny':'15',
+              {**scope,'scope':'new_fictional_evaluation_only','case_ids':list(entry.ORDER),
                'retain_fictional_captures':True,'expires_utc':(now+timedelta(hours=1)).isoformat()},
-              {**scope,'max_cny':'15','source':'codex_official_get_usage_limits','window_mins':10080,
-               'remaining_percent':99,'read_utc':now.isoformat()},
-              {**scope,'max_cny':'15','source':'https://docs.bigmodel.cn/cn/guide/start/pricing',
+              {**scope,'source':'https://docs.bigmodel.cn/cn/guide/start/pricing',
                'input_cny_per_million':'0.8','output_cny_per_million':'2.8','cache_storage_free':True,
                'operator_verified':True,'read_utc':now.isoformat()}]
-        paths=[self.root/(str(i)+'.json') for i in range(4)]
+        paths=[self.root/(str(i)+'.json') for i in range(3)]
         def write():
             for p,d in zip(paths,docs):p.write_bytes(entry.encode(d))
-        write();self.assertEqual(entry.authorization(self.release,*paths)[1],Decimal('15'))
+        write();self.assertEqual(entry.authorization(self.release,*paths),entry.sha(paths[1].read_bytes()))
         for i,key,value in [(0,'scope','execution'),(1,'expires_utc',(now-timedelta(seconds=1)).isoformat()),
-                (1,'max_attempts',True),(2,'window_mins',300),(2,'remaining_percent',50),
-                (2,'read_utc',(now-timedelta(minutes=6)).isoformat()),(3,'output_cny_per_million','3'),
-                (3,'operator_verified',False),(3,'capture_manifest_sha256','wrong')]:
+                (1,'case_ids',True),(1,'case_ids',list(reversed(entry.ORDER))),
+                (1,'case_ids',list(entry.ORDER[:-1])),(2,'output_cny_per_million','3'),
+                (2,'operator_verified',False),(2,'capture_manifest_sha256','wrong'),
+                (2,'read_utc',(now-timedelta(days=2)).isoformat())]:
             old=docs[i][key];docs[i][key]=value;write()
             with self.assertRaises(entry.Stop):entry.authorization(self.release,*paths)
             docs[i][key]=old;write()
+        for key,value in [('max_cny','15'),('max_attempts',12),('execution_mode','agent_file_launch')]:
+            docs[1][key]=value;write()
+            with self.assertRaises(entry.Stop):entry.authorization(self.release,*paths)
+            del docs[1][key];write()
         self.assertEqual(len(self.posts),0);self.assertFalse(self.state.exists())
 
     def test_stop_during_preclaim_wait(self):
@@ -289,15 +290,28 @@ class CaptureTests(unittest.TestCase):
         entry.seal_existing_real_state(self.state)  # Pure helper, fixture path; no execute/getpass.
         self.assert_stopped();self.assertEqual(len(self.posts),1)
 
-    def test_exact_global_reservation_exhaustion(self):
-        cap=entry.RESERVE
-        self.run_next(cap=cap)
-        report,review=self.review(cap=cap)
-        with self.assertRaisesRegex(entry.Stop,'attempt_or_reservation_limit'):
-            self.run_next(report,review,cap=cap)
-        self.assertEqual(len(self.posts),1)
-        self.assertEqual(len(list(self.state.glob('reserved-*'))),1)
-        self.assert_stopped()
+    def test_fee_accounting_has_no_user_ceiling(self):
+        self.run_next()
+        report,review=self.review()
+        self.run_next(report,review)
+        self.assertEqual(len(self.posts),2)
+        self.assertEqual(len(list(self.state.glob('reserved-*'))),2)
+        plan=entry.read(self.state/'plan.json')[1]
+        self.assertNotIn('max_cny',plan);self.assertNotIn('max_attempts',plan)
+        self.assertEqual(plan['case_ids'],list(entry.ORDER))
+        self.assertFalse((self.state/'STOP.json').exists())
+        one=entry.call_accounting(self.glm)
+        self.assertFalse(hasattr(one,'_limit'))
+        one.reserve()
+        with self.assertRaisesRegex(self.glm.ProviderFailure,'duplicate_call'):one.reserve()
+        one.finish('validated',{'prompt_tokens':100,'completion_tokens':50,'total_tokens':150})
+        self.assertEqual(one.snapshot()['calls'],1)
+        self.assertEqual(one.snapshot()['estimated_cny'],str(entry.RESERVE))
+        self.assertNotIn('reserved_cny',one.snapshot())
+        two=entry.call_accounting(self.glm);two.reserve()
+        with self.assertRaisesRegex(self.glm.ProviderFailure,'usage_outside_preflight'):
+            two.finish('validated',{'prompt_tokens':100,'completion_tokens':50,'total_tokens':999})
+        self.assertEqual(two.snapshot()['entry']['status'],'usage_outside_preflight')
 
 
 if __name__=='__main__':unittest.main(verbosity=2)
