@@ -39,9 +39,8 @@ def preview_retention(tenant_id: UUID, *, snapshot_days: int | None = None,
                   WHEN j.job_type NOT IN ('event_rewrite','projection_resynthesis') THEN 'unsupported_terminal_type'
                   WHEN j.state<>'succeeded' OR j.locked_at IS NOT NULL OR j.wait_reason IS NOT NULL
                     OR j.wait_input_fingerprint IS NOT NULL THEN 'terminal_bookkeeping'
-                  WHEN NOT EXISTS (SELECT 1 FROM maintenance_jobs newer
-                    WHERE newer.tenant_id=j.tenant_id AND newer.coalesce_key=j.coalesce_key
-                      AND (newer.created_at,newer.id)>(j.created_at,j.id)) THEN 'scheduler_anchor'
+                  WHEN row_number() OVER (PARTITION BY j.coalesce_key
+                    ORDER BY j.created_at DESC,j.id DESC)=1 THEN 'scheduler_anchor'
                   WHEN p.job_days IS NULL THEN 'policy_disabled'
                   WHEN j.updated_at > p.as_of-make_interval(days=>p.job_days) THEN 'recent'
                   ELSE 'eligible' END AS reason

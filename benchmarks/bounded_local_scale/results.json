@@ -1,0 +1,1005 @@
+{
+  "baseline_commit": "906380190f336cd9de9e5e3f6331f06e0f6fd63d",
+  "baseline": {
+    "python": "3.13.14",
+    "os": "macOS-26.6-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "postgres": "17.10 (Homebrew)",
+    "workload": {
+      "event_counts": [
+        365,
+        3650
+      ],
+      "sources_per_event": 2,
+      "jobs_per_event": 3,
+      "snapshots_per_event": 2,
+      "warmups": 1,
+      "samples": 7,
+      "api": "actual CLI main in fresh per-operation process; application imports excluded",
+      "deadline": "retention SQL 2000ms; worker whole process 45s; no artificial recall SQL timeout"
+    },
+    "status": "completed",
+    "stopped": true,
+    "postmaster_pid_absent": true,
+    "scales": [
+      {
+        "fixture": {
+          "tenant": "00000000-0000-0000-0000-00000000016d",
+          "counts": {
+            "evidence": 730,
+            "semantic_cards": 365,
+            "semantic_card_versions": 365,
+            "card_sources": 730,
+            "maintenance_jobs": 1095,
+            "recall_snapshots": 730
+          },
+          "expected_old_id": "c341134e-cc16-260e-64d3-b68209cbf98b"
+        },
+        "measurements": [
+          {
+            "operation": "retention_stats",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 47.55033400033426,
+            "samples_ms": [
+              47.013542000058806,
+              46.55129200000374,
+              46.82804199910606,
+              46.00854199998139,
+              47.29908400076965,
+              47.43087499991816,
+              46.95970800003124
+            ],
+            "median_ms": 46.95970800003124,
+            "p95_ms": 47.43087499991816,
+            "max_ms": 47.43087499991816,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 44.82187500070722,
+                "sql_sha256": "8c267a3d829b821211714162892d51c03aba0e77671f3fef0ea063eee10935b0"
+              },
+              {
+                "count": 1,
+                "ms": 0.2339590000701719,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.11799999992945231,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.04650000028050272,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.03500000002532033,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.421875,
+            "application_peak_rss_mib": 43.78125,
+            "totals": {
+              "jobs": 1095,
+              "snapshots": 730
+            },
+            "eligible": {
+              "jobs": 0,
+              "snapshots": 0
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 56.484375
+          },
+          {
+            "operation": "retention_candidates",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 48.110792000443325,
+            "samples_ms": [
+              48.38912499963044,
+              47.85549999996874,
+              48.15112500000396,
+              47.3483749992738,
+              47.39191599946935,
+              47.71683400031179,
+              48.04720799984352
+            ],
+            "median_ms": 47.85549999996874,
+            "p95_ms": 48.38912499963044,
+            "max_ms": 48.38912499963044,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 45.72479200032831,
+                "sql_sha256": "8c267a3d829b821211714162892d51c03aba0e77671f3fef0ea063eee10935b0"
+              },
+              {
+                "count": 1,
+                "ms": 0.2545420002206811,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.14383400048245676,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.040625000110594556,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.031708999813417904,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.46875,
+            "application_peak_rss_mib": 43.84375,
+            "totals": {
+              "jobs": 1095,
+              "snapshots": 730
+            },
+            "eligible": {
+              "jobs": 730,
+              "snapshots": 584
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 56.640625
+          },
+          {
+            "operation": "recall_recent",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 9.432333999939146,
+            "samples_ms": [
+              8.649040999443969,
+              9.549874999720487,
+              8.14479200016649,
+              8.878458000253886,
+              7.867833999625873,
+              8.78275000013673,
+              8.5761670006832
+            ],
+            "median_ms": 8.649040999443969,
+            "p95_ms": 9.549874999720487,
+            "max_ms": 9.549874999720487,
+            "sql_counts": [
+              24,
+              24,
+              24,
+              24,
+              24,
+              24,
+              24
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 0.46458399992843624,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 1,
+                "ms": 0.4100840005776263,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 1,
+                "ms": 0.40787499983707676,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.3879159994539805,
+                "sql_sha256": "8295509d37bd8ddc6084a858e413342bb3c0ae948c61d2120269d99caffc4387"
+              },
+              {
+                "count": 1,
+                "ms": 0.3787079995163367,
+                "sql_sha256": "9c614cd8625642f9dce35141cbe113c003eb0cd56ce222289695f6f6d8ca2473"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.46875,
+            "application_peak_rss_mib": 44.109375,
+            "event_ids": [
+              "75bbaefc-9e94-b9a1-d3db-52b39930160e"
+            ],
+            "event_count": 1,
+            "historical_available": true,
+            "reported_estimated_tokens": 158,
+            "returned_json_bytes": 1136,
+            "postgres_cluster_aggregate_rss_peak_mib": 45.078125
+          },
+          {
+            "operation": "recall_old",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 11.055540999223012,
+            "samples_ms": [
+              7.979874999364256,
+              8.96900000043388,
+              8.11741699999402,
+              7.536708000770886,
+              7.911624999906053,
+              7.358833999205672,
+              8.153249999850232
+            ],
+            "median_ms": 7.979874999364256,
+            "p95_ms": 8.96900000043388,
+            "max_ms": 8.96900000043388,
+            "sql_counts": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 0.451791999694251,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 1,
+                "ms": 0.44758300009561935,
+                "sql_sha256": "9c614cd8625642f9dce35141cbe113c003eb0cd56ce222289695f6f6d8ca2473"
+              },
+              {
+                "count": 1,
+                "ms": 0.43550000009418,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.38104099985503126,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 2,
+                "ms": 0.3785009994317079,
+                "sql_sha256": "1f9ed3d9e75795326cd44f9c163782769165b5a158a082442b286c3c1a7528dd"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.125,
+            "application_peak_rss_mib": 43.71875,
+            "event_ids": [],
+            "event_count": 0,
+            "historical_available": false,
+            "reported_estimated_tokens": 0,
+            "returned_json_bytes": 501,
+            "postgres_cluster_aggregate_rss_peak_mib": 60.890625
+          },
+          {
+            "operation": "recall_unrelated",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 9.853125000518048,
+            "samples_ms": [
+              8.00187500044558,
+              8.334666000337165,
+              8.350541000254452,
+              7.508125000640575,
+              8.025292000638728,
+              7.296916999621317,
+              8.053833000303712
+            ],
+            "median_ms": 8.025292000638728,
+            "p95_ms": 8.350541000254452,
+            "max_ms": 8.350541000254452,
+            "sql_counts": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 0.46550000024581095,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 1,
+                "ms": 0.3969170002164901,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.38583300010941457,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 2,
+                "ms": 0.38545799998246366,
+                "sql_sha256": "1f9ed3d9e75795326cd44f9c163782769165b5a158a082442b286c3c1a7528dd"
+              },
+              {
+                "count": 1,
+                "ms": 0.37579099989670794,
+                "sql_sha256": "9c614cd8625642f9dce35141cbe113c003eb0cd56ce222289695f6f6d8ca2473"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.484375,
+            "application_peak_rss_mib": 44.0625,
+            "event_ids": [],
+            "event_count": 0,
+            "historical_available": false,
+            "reported_estimated_tokens": 0,
+            "returned_json_bytes": 501,
+            "postgres_cluster_aggregate_rss_peak_mib": 60.484375
+          }
+        ]
+      },
+      {
+        "fixture": {
+          "tenant": "00000000-0000-0000-0000-000000000e42",
+          "counts": {
+            "evidence": 7300,
+            "semantic_cards": 3650,
+            "semantic_card_versions": 3650,
+            "card_sources": 7300,
+            "maintenance_jobs": 10950,
+            "recall_snapshots": 7300
+          },
+          "expected_old_id": "3bb0a508-f901-ec6e-67c5-bd000c8457d6"
+        },
+        "measurements": [
+          {
+            "operation": "retention_stats",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 0,
+            "first_call_ms": null,
+            "samples_ms": [],
+            "median_ms": null,
+            "p95_ms": null,
+            "max_ms": null,
+            "sql_counts": [],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 2005.2225419995011,
+                "sql_sha256": "8c267a3d829b821211714162892d51c03aba0e77671f3fef0ea063eee10935b0"
+              },
+              {
+                "count": 1,
+                "ms": 0.3972079994127853,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.13954200039734133,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.04462500055524288,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.041000000237545464,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": {
+              "type": "QueryCanceled",
+              "sqlstate": "57014",
+              "ms": 2007.7867079999123
+            },
+            "application_startup_peak_rss_mib": 43.453125,
+            "application_peak_rss_mib": 43.5625,
+            "postgres_cluster_aggregate_rss_peak_mib": 92.359375
+          },
+          {
+            "operation": "retention_candidates",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 0,
+            "first_call_ms": null,
+            "samples_ms": [],
+            "median_ms": null,
+            "p95_ms": null,
+            "max_ms": null,
+            "sql_counts": [],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 2001.8835419996321,
+                "sql_sha256": "8c267a3d829b821211714162892d51c03aba0e77671f3fef0ea063eee10935b0"
+              },
+              {
+                "count": 1,
+                "ms": 0.3586250004445901,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.12225000045873458,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.04829199951927876,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.035666000258061104,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": {
+              "type": "QueryCanceled",
+              "sqlstate": "57014",
+              "ms": 2004.5335830000113
+            },
+            "application_startup_peak_rss_mib": 43.109375,
+            "application_peak_rss_mib": 43.234375,
+            "postgres_cluster_aggregate_rss_peak_mib": 67.65625
+          },
+          {
+            "operation": "recall_recent",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 12.469125000279746,
+            "samples_ms": [
+              12.02745800037519,
+              11.622541000178899,
+              10.996666000210098,
+              10.923583000476356,
+              11.105833000328857,
+              11.190833000000566,
+              11.946917000386748
+            ],
+            "median_ms": 11.190833000000566,
+            "p95_ms": 12.02745800037519,
+            "max_ms": 12.02745800037519,
+            "sql_counts": [
+              24,
+              24,
+              24,
+              24,
+              24,
+              24,
+              24
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 1.780208000127459,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 1,
+                "ms": 1.4380829998117406,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.8355829995707609,
+                "sql_sha256": "705c367a2b4a2f97829c2706163ebd7f891bff95d26f9c7b9783ce92b2fded0f"
+              },
+              {
+                "count": 1,
+                "ms": 0.46270799975900445,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 1,
+                "ms": 0.4295839999031159,
+                "sql_sha256": "9c614cd8625642f9dce35141cbe113c003eb0cd56ce222289695f6f6d8ca2473"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.40625,
+            "application_peak_rss_mib": 44.046875,
+            "event_ids": [
+              "329772ec-a5ca-320d-d6c0-e3c7e52bddef"
+            ],
+            "event_count": 1,
+            "historical_available": true,
+            "reported_estimated_tokens": 158,
+            "returned_json_bytes": 1136,
+            "postgres_cluster_aggregate_rss_peak_mib": 64.890625
+          },
+          {
+            "operation": "recall_old",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 12.341791999460838,
+            "samples_ms": [
+              11.051749999751337,
+              10.557415999755904,
+              10.41512500069075,
+              10.715667000113172,
+              10.313083999790251,
+              10.040541000307712,
+              10.707874999752676
+            ],
+            "median_ms": 10.557415999755904,
+            "p95_ms": 11.051749999751337,
+            "max_ms": 11.051749999751337,
+            "sql_counts": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 1.4846250005575712,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 1,
+                "ms": 1.4320829995995155,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.7691250002608285,
+                "sql_sha256": "705c367a2b4a2f97829c2706163ebd7f891bff95d26f9c7b9783ce92b2fded0f"
+              },
+              {
+                "count": 1,
+                "ms": 0.5081249992144876,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 2,
+                "ms": 0.43437500062282197,
+                "sql_sha256": "1f9ed3d9e75795326cd44f9c163782769165b5a158a082442b286c3c1a7528dd"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.3125,
+            "application_peak_rss_mib": 43.890625,
+            "event_ids": [],
+            "event_count": 0,
+            "historical_available": false,
+            "reported_estimated_tokens": 0,
+            "returned_json_bytes": 501,
+            "postgres_cluster_aggregate_rss_peak_mib": 46.21875
+          },
+          {
+            "operation": "recall_unrelated",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 11.448209000263887,
+            "samples_ms": [
+              10.339958000258775,
+              11.055042000407411,
+              10.304624999662337,
+              9.965000000192958,
+              10.368834000473726,
+              10.10179100012465,
+              10.171249999984866
+            ],
+            "median_ms": 10.304624999662337,
+            "p95_ms": 11.055042000407411,
+            "max_ms": 11.055042000407411,
+            "sql_counts": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 1.548541999909503,
+                "sql_sha256": "a8bc0080ceaef0786e0ebeb97134152887d320662ad898c452097c5644802b7c"
+              },
+              {
+                "count": 1,
+                "ms": 1.1235410001972923,
+                "sql_sha256": "675fe339b15487dc950055200f34f101f33014d3883da7ab2427ecf71b3b92c2"
+              },
+              {
+                "count": 1,
+                "ms": 0.8732910000617267,
+                "sql_sha256": "705c367a2b4a2f97829c2706163ebd7f891bff95d26f9c7b9783ce92b2fded0f"
+              },
+              {
+                "count": 1,
+                "ms": 0.4006669996670098,
+                "sql_sha256": "0352546322ca5a7a98cd4aa4890215e3cbd3ea2630a7f77abae5711e11c21c23"
+              },
+              {
+                "count": 1,
+                "ms": 0.399124999603373,
+                "sql_sha256": "8295509d37bd8ddc6084a858e413342bb3c0ae948c61d2120269d99caffc4387"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.4375,
+            "application_peak_rss_mib": 44.0625,
+            "event_ids": [],
+            "event_count": 0,
+            "historical_available": false,
+            "reported_estimated_tokens": 0,
+            "returned_json_bytes": 501,
+            "postgres_cluster_aggregate_rss_peak_mib": 49.59375
+          }
+        ]
+      }
+    ]
+  },
+  "retention_window_fix": {
+    "python": "3.13.14",
+    "os": "macOS-26.6-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "postgres": "17.10 (Homebrew)",
+    "workload": {
+      "retention_only": true,
+      "event_counts": [
+        365,
+        3650
+      ],
+      "sources_per_event": 2,
+      "jobs_per_event": 3,
+      "snapshots_per_event": 2,
+      "warmups": 1,
+      "samples": 7,
+      "api": "actual CLI main in fresh per-operation process; application imports excluded",
+      "deadline": "retention SQL 2000ms; worker whole process 45s; no artificial recall SQL timeout"
+    },
+    "status": "completed_without_entry_failures",
+    "stopped": true,
+    "postmaster_pid_absent": true,
+    "scales": [
+      {
+        "fixture": {
+          "tenant": "00000000-0000-0000-0000-00000000016d",
+          "counts": {
+            "evidence": 730,
+            "semantic_cards": 365,
+            "semantic_card_versions": 365,
+            "card_sources": 730,
+            "maintenance_jobs": 1095,
+            "recall_snapshots": 730
+          },
+          "expected_old_id": "c341134e-cc16-260e-64d3-b68209cbf98b"
+        },
+        "measurements": [
+          {
+            "operation": "retention_stats",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 4.422625000188418,
+            "samples_ms": [
+              3.4454169999662554,
+              3.3929170003830222,
+              3.7136669998290017,
+              3.786165999372315,
+              3.335417000016605,
+              3.3706670001265593,
+              3.9040000001477893
+            ],
+            "median_ms": 3.4454169999662554,
+            "p95_ms": 3.9040000001477893,
+            "max_ms": 3.9040000001477893,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 1.816208000491315,
+                "sql_sha256": "d39de6a15533d966ae5a35987ff76aa8e376c46fd2a181ea62916f78a9fdb789"
+              },
+              {
+                "count": 1,
+                "ms": 0.22833300045022042,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.10820800071087433,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.03445899983489653,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.03387500055396231,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.28125,
+            "application_peak_rss_mib": 43.609375,
+            "totals": {
+              "jobs": 1095,
+              "snapshots": 730
+            },
+            "eligible": {
+              "jobs": 0,
+              "snapshots": 0
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 56.140625,
+            "rss_unreadable_samples": 0
+          },
+          {
+            "operation": "retention_candidates",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 4.662915999688266,
+            "samples_ms": [
+              3.448792000199319,
+              3.6378340000737808,
+              4.285666000214405,
+              3.784917000302812,
+              3.6114579997956753,
+              3.5125409995089285,
+              3.9311250002356246
+            ],
+            "median_ms": 3.6378340000737808,
+            "p95_ms": 4.285666000214405,
+            "max_ms": 4.285666000214405,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 1.846957999987353,
+                "sql_sha256": "d39de6a15533d966ae5a35987ff76aa8e376c46fd2a181ea62916f78a9fdb789"
+              },
+              {
+                "count": 1,
+                "ms": 0.3381670003363979,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.1205830003527808,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.033583000004000496,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.031165999644144904,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.625,
+            "application_peak_rss_mib": 44.015625,
+            "totals": {
+              "jobs": 1095,
+              "snapshots": 730
+            },
+            "eligible": {
+              "jobs": 730,
+              "snapshots": 584
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 41.8125,
+            "rss_unreadable_samples": 0
+          }
+        ]
+      },
+      {
+        "fixture": {
+          "tenant": "00000000-0000-0000-0000-000000000e42",
+          "counts": {
+            "evidence": 7300,
+            "semantic_cards": 3650,
+            "semantic_card_versions": 3650,
+            "card_sources": 7300,
+            "maintenance_jobs": 10950,
+            "recall_snapshots": 7300
+          },
+          "expected_old_id": "3bb0a508-f901-ec6e-67c5-bd000c8457d6"
+        },
+        "measurements": [
+          {
+            "operation": "retention_stats",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 13.853249999556283,
+            "samples_ms": [
+              13.486750000083703,
+              13.512583000192535,
+              12.746499999593652,
+              13.090166999973007,
+              12.961708999682742,
+              13.504124999599298,
+              12.971332999768492
+            ],
+            "median_ms": 13.090166999973007,
+            "p95_ms": 13.512583000192535,
+            "max_ms": 13.512583000192535,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 10.569875000328466,
+                "sql_sha256": "d39de6a15533d966ae5a35987ff76aa8e376c46fd2a181ea62916f78a9fdb789"
+              },
+              {
+                "count": 1,
+                "ms": 0.254334000601375,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.12895799955003895,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.04254200030118227,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.03600000036385609,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.40625,
+            "application_peak_rss_mib": 43.796875,
+            "totals": {
+              "jobs": 10950,
+              "snapshots": 7300
+            },
+            "eligible": {
+              "jobs": 0,
+              "snapshots": 0
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 66.796875,
+            "rss_unreadable_samples": 0
+          },
+          {
+            "operation": "retention_candidates",
+            "warmups": 1,
+            "requested_samples": 7,
+            "completed_samples": 7,
+            "first_call_ms": 14.468375000433298,
+            "samples_ms": [
+              13.745083000685554,
+              13.968500000373751,
+              14.011917000061658,
+              13.595207999969716,
+              13.588334000814939,
+              13.79604100020515,
+              13.891667000279995
+            ],
+            "median_ms": 13.79604100020515,
+            "p95_ms": 14.011917000061658,
+            "max_ms": 14.011917000061658,
+            "sql_counts": [
+              6,
+              6,
+              6,
+              6,
+              6,
+              6,
+              6
+            ],
+            "last_call_sql_top": [
+              {
+                "count": 1,
+                "ms": 11.840458999358816,
+                "sql_sha256": "d39de6a15533d966ae5a35987ff76aa8e376c46fd2a181ea62916f78a9fdb789"
+              },
+              {
+                "count": 1,
+                "ms": 0.21758300044893986,
+                "sql_sha256": "eaf742cfdc76cfc583a9f0a5c91ed1c57d8506054e7e3af1a16975a053309591"
+              },
+              {
+                "count": 1,
+                "ms": 0.10862500039365841,
+                "sql_sha256": "9368dba756670245419835ba70b49fec353f004e4969d6d370b3b1ed6b48b0d1"
+              },
+              {
+                "count": 1,
+                "ms": 0.0334169999405276,
+                "sql_sha256": "bcd2639091d097d5a154e2fb2084b848c78c86b652b6ab9f9f7fa5c2c1685137"
+              },
+              {
+                "count": 1,
+                "ms": 0.029541000003519002,
+                "sql_sha256": "6c7715e5d5bd7623eafcc8db90bf4c83be1726cc41a73951dfb0bad78bf7764f"
+              }
+            ],
+            "failure": null,
+            "application_startup_peak_rss_mib": 43.171875,
+            "application_peak_rss_mib": 43.578125,
+            "totals": {
+              "jobs": 10950,
+              "snapshots": 7300
+            },
+            "eligible": {
+              "jobs": 7300,
+              "snapshots": 5840
+            },
+            "postgres_cluster_aggregate_rss_peak_mib": 61.546875,
+            "rss_unreadable_samples": 0
+          }
+        ]
+      }
+    ]
+  },
+  "interpretation": "descriptive warm CLI main timings; 7-sample p95=max; aggregate PostgreSQL RSS is sampled/shared-page double counted and larger tier includes prior tenant; not production SLA or memory-retention cap"
+}
