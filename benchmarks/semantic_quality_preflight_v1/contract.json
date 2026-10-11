@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "status": "preparation_only_not_executed",
+  "sample_origin": "new authored fictional Chinese daily-life material, not real personal data or existing benchmark",
+  "splits": {
+    "development": 6,
+    "heldout": 6
+  },
+  "dimensions": [
+    "ordinary",
+    "time",
+    "person_role",
+    "conditional",
+    "counterevidence",
+    "uncertainty"
+  ],
+  "provider": "existing glm_extraction configuration; reverify availability/pricing before separate authorization",
+  "request_limit": 12,
+  "one_attempt_per_case": true,
+  "retry_limit": 0,
+  "parallel_requests": 1,
+  "real_requests_this_preparation": 0,
+  "model_or_prompt_tuning_during_run": false,
+  "heldout_rule": "independently authored; root has not inspected semantic contents; release only after complete development manual review passes; retire set after any use for implementation/prompt changes",
+  "scoring": {
+    "structural_is_not_semantic": true,
+    "semantic_judge": "human, source evidence and captured output; no paid model judge",
+    "acceptable_paraphrase": true,
+    "fixed_expected_strings_required": false,
+    "phase_success": "structurally valid; all applicable required claims and forbidden checks human-pass with provenance verified; only returned_content obligations may be not_applicable for explicitly allowed empty output. Separately count empty outputs; never infer source/trace preservation or recall quality from them.",
+    "small_sample_claim": "narrow preflight only, never production/generalization quality",
+    "dimensions_separate": [
+      "extraction",
+      "recall",
+      "correction",
+      "abstention"
+    ],
+    "unexecuted_axes": "not_run, never inherit extraction pass",
+    "recall": "compiled context and pinned expansion only, using actual reviewed captures; no oracle substitution",
+    "correction": "candidate intent separate from actual host-target operation; only explicit target plus unrelated anchor guard",
+    "abstention": "no-save/empty historical context separate from Agent response; actual dialogue refusal remains not_run without Agent evidence",
+    "empty_output": "allowed only where frozen oracle explicitly permits it; all forbidden checks still apply, any_output obligations still apply; no quality credit for unexecuted persistence/recall/Agent response"
+  },
+  "stop_conditions": [
+    "remaining weekly quota <=50 or official week unreadable; no automatic resume",
+    "human denial or missing new outbound authorization",
+    "any transport/HTTP/schema/source/usage error, timeout or unknown result; no retries",
+    "first applicable forbidden-claim violation of any severity or required-claim failure after per-case human review; remaining cases not_run",
+    "input/prompt/contract/case hash change; no late edit to oracle/threshold",
+    "aggregate new approved spend ceiling reached or cannot be verified; sequential ledger needed",
+    "max12 attempt reservations; fresh run namespace, never old consumed state"
+  ],
+  "cost_note": "No current pricing claim. Existing GLM code reserves using 2026-10-09 constants: 1.2058624 CNY per attempt; 12=14.4703488 CNY. This is stale planning arithmetic, not an approved cap/current price/provider bill guarantee. User must specify fresh cumulative ceiling and permitted model/endpoint before outbound entry review.",
+  "entry_boundary": "Offline CLI only: check/export/ingest/template/score. No credential input, env lookup or outbound transport. Real capture entry is a remaining approval/review deliverable, not an executable real command in this preparation.",
+  "future_capture_row_schema": {
+    "case_id": "frozen case id",
+    "request_sha256": "payload digest exported by this tool",
+    "response": "provider JSON envelope matching existing GLM contract; no headers or credentials"
+  },
+  "future_review_row_schema": {
+    "case_id": "frozen case id",
+    "capture_report_sha256": "digest",
+    "provenance_verified": "true only after operator verifies actual new authorized model result",
+    "required": "all r IDs -> pass/fail/unjudged",
+    "forbidden": "all f IDs -> pass/fail/unjudged (pass means prohibited inference absent)",
+    "notes": "human evidence explanations, not exact-match rules",
+    "recall": {
+      "status": "pass/fail/not_run",
+      "evidence": "separate captured context artifact digest or null"
+    },
+    "correction": {
+      "status": "pass/fail/not_run",
+      "evidence": "separate target/unchanged/replay evidence artifact digest or null"
+    },
+    "abstention": {
+      "status": "pass/fail/not_run",
+      "evidence": "separate unknown/no-save/Agent-response evidence artifact digest or null"
+    }
+  }
+}

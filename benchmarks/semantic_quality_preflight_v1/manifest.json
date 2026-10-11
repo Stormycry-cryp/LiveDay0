@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "base_commit": "a072bdb58d8b24053f680df1317fa314cc02df67",
+  "status": "frozen_preparation_not_model_result",
+  "dimensions": [
+    "ordinary",
+    "time",
+    "person_role",
+    "conditional",
+    "counterevidence",
+    "uncertainty"
+  ],
+  "files": {
+    "benchmarks/semantic_quality_preflight_v1/contract.json": "7811f7a8f3bc533a8ba200f3b9df49732e036888a4504733857198ec731306a1",
+    "benchmarks/semantic_quality_preflight_v1/development.jsonl": "00f350f0b390658e7d4402758c8db839ca4c20a48a0b411c16e9b4385d81885c",
+    "benchmarks/semantic_quality_preflight_v1/heldout.jsonl": "2b2433fae71087d0fa688ff70b05e2853c184a57eddc048613f328c153f8977e",
+    "benchmarks/semantic_quality_preflight_v1/prepare.py": "9017bfd3ca38d6f347d05e6906b0b7b8ebf28c3fc12f835b2013f3cfa8c7b75b",
+    "src/liveday0/types.py": "8b93acb4b047c7e9112ad4579aa12f9331e841b3a141ba5069395ecabe409228",
+    "src/liveday0/serialization.py": "061e2f26f55f2a86a52d74d993a7666a4c1d360acc4e5b31c624b6704d12ee45",
+    "src/liveday0/extraction_contract.py": "d92c46328fd9acf8a31ad2d54fd9ef5468f767a645b83ad3bc94a83b6540bfb2",
+    "src/liveday0/extraction_wire.py": "dbf727bfe5ea4ae17ad08b5ab2a50759076bc0779de7a9caa0664960e712a1bb",
+    "src/liveday0/glm_extraction.py": "c8682e0b35b6ccfda1968e63f44d58bb3e3a47cd14f0c4f94787b3bb6b4b6970",
+    "src/liveday0/local_extraction.py": "493103fab1adb5f93f45b9d47ad5b93dffd0f1557c83942c3000d24ddbc0ffbc",
+    "src/liveday0/provider_budget.py": "3292014bab0220d82cdf3d9f721e378d3b516e4d43a4e71dde04455f99e15fea"
+  },
+  "split_counts": {
+    "development": 6,
+    "heldout": 6
+  },
+  "holdout_author": "v2_narrow_review",
+  "independent_oracle_precheck": "semantic_oracle_precheck; non-author, read-only, no execution",
+  "real_model_calls": 0,
+  "future_attempt_limit": 12,
+  "retry_limit": 0,
+  "credentials_read": false,
+  "heldout_semantics_shown_to_root": false
+}
