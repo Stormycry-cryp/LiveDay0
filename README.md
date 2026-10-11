@@ -67,6 +67,8 @@ flowchart LR
 | [`migrations.py`](./src/liveday0/migrations.py) | 执行成对 SQL 迁移并查询状态 |
 | [`cli.py`](./src/liveday0/cli.py) | 提供本地开发和验收入口 |
 
+安装发行包时，wheel 自带与仓库一致的成对 SQL 迁移；缺失或不完整的迁移资源会在连接数据库前报错。构建、安装与隔离验收见 [安装包迁移说明](./docs/v1-design/installed-migrations.md)。
+
 ### PostgreSQL 保存全部权威状态
 
 证据、普通痕迹、规范卡片与版本、事件增量、关系、派生视图、维护任务、召回快照和删除标记都在 PostgreSQL 中。

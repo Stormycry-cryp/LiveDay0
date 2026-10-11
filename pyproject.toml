@@ -22,6 +22,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/liveday0"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "liveday0/sql_migrations"
+
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
