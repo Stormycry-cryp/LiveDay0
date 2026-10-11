@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "base_commit": "9ee013f297ec79ac43542db004b8d2f96a9893a3",
+  "shared_model_key": "provider:similar-visit",
+  "cases": [
+    {
+      "id": "mother_visit_oct1",
+      "date": "2026-10-01T00:00:00+00:00",
+      "source": "合成：10月1日，我陪母亲去复诊，结束后送她回家。",
+      "body": {
+        "goal_context": "我陪母亲去复诊",
+        "current_result": "复诊结束后送母亲回家",
+        "boundaries": "仅10月1日当次经历",
+        "uncertainty": "没有长期关系评价"
+      },
+      "decision": "approve"
+    },
+    {
+      "id": "my_visit_oct2",
+      "date": "2026-10-02T00:00:00+00:00",
+      "source": "合成：10月2日，母亲陪我去复诊，结束后我自己回家。",
+      "body": {
+        "goal_context": "母亲陪我去复诊",
+        "current_result": "复诊结束后我自己回家",
+        "boundaries": "仅10月2日当次经历",
+        "uncertainty": "没有长期关系评价"
+      },
+      "decision": "approve"
+    },
+    {
+      "id": "mother_visit_oct3",
+      "date": "2026-10-03T00:00:00+00:00",
+      "source": "合成：10月3日，我陪母亲去复诊，结束后送她回家。",
+      "body": {
+        "goal_context": "我陪母亲去复诊",
+        "current_result": "复诊结束后送母亲回家",
+        "boundaries": "仅10月3日当次经历",
+        "uncertainty": "没有长期关系评价"
+      },
+      "decision": "approve"
+    },
+    {
+      "id": "confused_role",
+      "date": "2026-10-04T00:00:00+00:00",
+      "source": "合成：10月4日，我陪母亲去复诊。",
+      "body": {
+        "goal_context": "母亲陪我去复诊",
+        "current_result": "母亲陪我完成复诊",
+        "boundaries": "仅10月4日当次经历",
+        "uncertainty": "没有长期关系评价"
+      },
+      "decision": "reject",
+      "why": "Candidate reverses person roles. Validator cannot establish semantic truth; exact host review can reject."
+    },
+    {
+      "id": "correct_oct2",
+      "date": "2026-10-05T00:00:00+00:00",
+      "source": "合成：纠正10月2日那次，是朋友陪我，不是母亲。",
+      "body": {
+        "goal_context": "朋友陪我去复诊",
+        "current_result": "复诊结束后我自己回家",
+        "boundaries": "仅10月2日当次经历",
+        "uncertainty": "明确纠正陪同者，不推断其他事件"
+      },
+      "decision": "approve",
+      "action": "correct",
+      "target": "my_visit_oct2",
+      "expected_version": 1
+    }
+  ],
+  "expectations": [
+    "All three approved captures use the same proposed model canonical/revision key but persist three distinct host allocated identities and sources with original dates and person roles.",
+    "Same-source replay of first capture returns original identity and one source.",
+    "Explicitly rejected confused-role candidate reaches complete review; no evidence/card/revision/snapshot writes. Not automatic semantic rejection.",
+    "Explicit correction affects only Oct2 event, version1->2; other event IDs, versions, bodies and sources unchanged.",
+    "Recall preserves distinct event identities, provenance and qualifiers; no life/person generalization invented.",
+    "Only frozen synthetic ProposalBatch and scripted human decisions; no extraction accuracy claim."
+  ]
+}
