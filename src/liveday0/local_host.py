@@ -51,10 +51,13 @@ def local_tenant_identity():
 class LocalMemorySession:
     synthetic = True
 
-    def __init__(self, *, adapter=None, confirm=None):
+    def __init__(self, *, adapter=None, confirm=None, review_candidates=False):
+        if type(review_candidates) is not bool:
+            raise ValueError('review_candidates must be a host boolean')
         self.tenant_id=local_tenant_identity()
         self._adapter=adapter or DeterministicLocalAdapter()
         self._confirm=confirm
+        self._review_candidates=review_candidates
         self._approved=set()
         self._read_grants=set()
         self._service=MemoryService(self.tenant_id,explicit_save_authorizer=self._explicit_check)
@@ -166,6 +169,9 @@ class LocalMemorySession:
             evidence,semantic=source_material(request,item)
             if item.needs_confirmation:
                 self._approve('save-sensitive',{'source':asdict(evidence),'semantic':asdict(semantic)})
+            elif self._review_candidates:
+                self._approve('save-candidate',{'source':asdict(evidence),
+                    'semantic':asdict(semantic),'proposal':item.proposal.to_dict()})
             receipt=self._service.observe(evidence,semantics=[semantic])
             result['outcomes'].append({'status':'stored' if receipt['created'] else 'duplicate',**receipt})
         return result

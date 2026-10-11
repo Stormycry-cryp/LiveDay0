@@ -115,6 +115,8 @@ uv run liveday0 migrate status
 
 运行方式、具体命令、来源擦除和身份限制见 [合成本地入口](./docs/v1-design/local-synthetic-entry.md)。它不代表通用自然语言提取或服务器鉴权已完成。
 
+本机有 PostgreSQL 17 工具时，可运行 `uv run liveday0 synthetic-demo --scripted`，在自行新建的空隔离库中验证普通候选审阅、拒绝、保存、检索、更正和来源删除；`uv run liveday0 synthetic-demo` 使用终端确认。该命令不使用现有数据库地址，结束后停止自己的实例并保留合成证据。完整步骤与验收边界见[候选审阅合成闭环](./docs/v1-design/reviewed-synthetic-demo.md)。
+
 ### 写入证据并召回
 
 先建立一个本地测试租户。

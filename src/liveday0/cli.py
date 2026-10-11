@@ -47,6 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
     local = sub.add_parser("local", help="trusted OS session for the bounded synthetic prototype")
     local.add_argument("--demo", action="store_true", help="run fixed synthetic inputs with fixture consent")
 
+    synthetic = sub.add_parser("synthetic-demo", help="fresh isolated PostgreSQL and reviewed fixed synthetic loop")
+    synthetic.add_argument("--scripted", action="store_true", help="fixture choices, not human consent evidence")
+    synthetic.add_argument("--postgres-bin", default="/opt/homebrew/opt/postgresql@17/bin")
+
     migration = sub.add_parser("migrate", help="apply, revert, or inspect SQL migrations")
     migration.add_argument("action", choices=("up", "down", "status"))
     migration.add_argument("--steps", type=int, default=1)
@@ -88,6 +92,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    if args.command == "synthetic-demo":
+        from liveday0.synthetic_demo import launch
+        print(_json(launch(scripted=args.scripted, postgres_bin=Path(args.postgres_bin))))
+        return
     if args.command == "local":
         from liveday0.local_console import main as local_main
         local_main(demo=args.demo)

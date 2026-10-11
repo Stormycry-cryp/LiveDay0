@@ -10,12 +10,14 @@ from liveday0.local_host import LocalMemorySession
 
 def terminal_confirmation(approval):
     # Deliberately separate from request JSON/stdin. A model flag cannot answer.
-    with open('/dev/tty','r+') as terminal:
+    # A terminal is not seekable: a single buffered r+ stream fails on macOS.
+    # Keep the trusted read/write channel on separate text handles.
+    with open('/dev/tty','r') as reader, open('/dev/tty','w') as terminal:
         terminal.write('\n请审阅这一次操作：'+approval.action+'\n')
         terminal.write(json.dumps(approval.payload,ensure_ascii=False,indent=2)+'\n')
         terminal.write('仅批准上述完整范围请输入 SAVE；其他输入取消：')
         terminal.flush()
-        return terminal.readline().strip()=='SAVE'
+        return reader.readline().strip()=='SAVE'
 
 
 def run_synthetic_demo():

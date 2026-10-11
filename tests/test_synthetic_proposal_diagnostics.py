@@ -139,7 +139,7 @@ class SyntheticProposalDiagnosticTests(unittest.TestCase):
 
     def test_terminal_save_and_reject_use_existing_prompt(self):
         # Exercise the actual terminal helper without opening a human TTY.
-        from unittest.mock import patch
+        from unittest.mock import call, patch
         class Terminal(io.StringIO):
             def __init__(self, answer):
                 super().__init__(); self.answer = answer
@@ -152,7 +152,7 @@ class SyntheticProposalDiagnosticTests(unittest.TestCase):
             terminal = Terminal(answer)
             with patch('builtins.open', return_value=terminal) as opened:
                 self.assertIs(console.terminal_confirmation(approval), accepted)
-            opened.assert_called_once_with('/dev/tty', 'r+')
+            self.assertEqual(opened.call_args_list, [call('/dev/tty', 'r'), call('/dev/tty', 'w')])
             self.assertIn('save-sensitive', terminal.getvalue())
 
     def test_unknown_synthetic_text_is_blocked_without_adapter_call(self):
