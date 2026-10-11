@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "base_commit": "ee7d5bd86a3427b76c6ce219a3ac5d4a217e9860",
+  "defaults": {
+    "source_reference_limit": 256,
+    "maximum": 4096
+  },
+  "events": [
+    {
+      "key": "heavy",
+      "cue": "高连接散步事件",
+      "sources": 9
+    },
+    {
+      "key": "pair_a",
+      "cue": "共同出行事件",
+      "sources": 4
+    },
+    {
+      "key": "pair_b",
+      "cue": "共同出行事件",
+      "sources": 4
+    }
+  ],
+  "expectations": [
+    "Nine-source selected event with cap8 returns recall_work_limit_exceeded/source_reference_limit, no partial context, no new snapshot.",
+    "Exact cap9 preserves all nine source references and qualifiers.",
+    "Two selected four-source events consume one shared total: cap7 rejects, cap8 returns both complete.",
+    "Unrelated query with cap1 yields empty history despite adjacent high-degree evidence.",
+    "Unrelated high-degree candidate is not source-loaded when querying two relevant four-source events.",
+    "SQL source row transfer is limited to cap+1 sentinel; no source value enters context after failure.",
+    "CLI --source-refs8 uses same typed content-free exit2; no life-memory alteration, deadline and tenant gates remain.",
+    "Counts bound source metadata transfer/assembly for selected cards only, not database scanning, deltas, trace/projection supports, body sizes or all intermediate work."
+  ],
+  "quality_boundary": "previous semantic quality item remains unvalidated for real models; source work only, no provider calls"
+}

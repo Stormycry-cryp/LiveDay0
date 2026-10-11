@@ -50,3 +50,5 @@ API仍返回字典。预算按`recall_json()`的UTF-8序列化合同计算；`re
 原反例`/private/tmp/ld0-limit-red-lkkdrpek/manifest.json`，新聚合`/private/tmp/ld0-limits-0owrgs45/manifest.json`，受影响旧cue`/private/tmp/ld0-oldcue-8sujujyp/manifest.json`，全部停止、PID不存在。接口没有增加记忆TTL、硬容量治理、自动清理或真实模型质量证明。
 
 下一项仍在产品第三优先：先复用中文变体/重复事件/无关查询的现有证据，挑一个真实未验收的生活检索反例；高连接来源/增量等完整工作量门槛也保持开放。不要转成无限维护诊断或事后放宽门槛。
+
+后续[选中卡片来源引用工作量](recall-source-work.md)新增默认总256行、最大4096的来源读取/装配限额及`recall_work_limit_exceeded`；先选择相关卡才加载来源。其余完整工作量与严格墙钟限制仍保持，不修改本页原字节/超时证据。

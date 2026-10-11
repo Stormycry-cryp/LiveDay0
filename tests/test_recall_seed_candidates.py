@@ -78,11 +78,24 @@ compiler=s.recall_compiler
 with __import__('liveday0.db',fromlist=['tenant_transaction']).tenant_transaction(s.tenant_id,mode='read') as c:
     assert old in compiler._fts_card_ids(c,'old_unique_trip',48)
     assert not compiler._fts_card_ids(c,'foreignsecret',48)
-selected=[];original=compiler._source_map
-def capture(c,ids):
-    selected.append(list(ids));return original(c,ids)
+# Observe actual bounded canonical query rows; source loading now follows selection.
+from contextlib import contextmanager
+import liveday0.recall as recall_module
+selected=[];original_tx=recall_module.tenant_transaction
+class TracedCursor:
+    def __init__(self,cursor):self.cursor=cursor
+    def fetchall(self):
+        rows=self.cursor.fetchall();selected.append([r['id'] for r in rows]);return rows
+class TracedConnection:
+    def __init__(self,conn):self.conn=conn
+    def execute(self,query,*args,**kwargs):
+        cursor=self.conn.execute(query,*args,**kwargs)
+        return TracedCursor(cursor) if 'WITH recent_ids AS' in str(query) else cursor
+@contextmanager
+def traced_transaction(*args,**kwargs):
+    with original_tx(*args,**kwargs) as conn:yield TracedConnection(conn)
 def recalled(query,options=None):
-    with patch.object(compiler,'_source_map',capture):context=s.recall(query,options=options)
+    with patch.object(recall_module,'tenant_transaction',traced_transaction):context=s.recall(query,options=options)
     assert len(selected[-1])<=(options.candidate_limit if options else 48)
     s.release_snapshot(UUID(context['snapshot']['id']))
     return context

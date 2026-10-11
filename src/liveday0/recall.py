@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
-from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded
+from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded, RecallWorkLimitExceeded
 from liveday0.recall_limits import check_deadline, recall_json, wire_bytes
 from liveday0.types import RecallOptions
 
@@ -93,7 +93,6 @@ class RecallCompiler:
                 (self.tenant_id, options.candidate_limit, self.tenant_id,
                  seed_ids, seed_ids, options.candidate_limit),
             ).fetchall()
-            source_map = self._source_map(conn, [row["id"] for row in cards])
             scored: list[tuple[float, dict]] = []
             for row in cards:
                 check_deadline()
@@ -114,6 +113,9 @@ class RecallCompiler:
                     scored.append((score, row))
             scored.sort(key=lambda item: (item[0], item[1]["valid_at"]), reverse=True)
             selected_rows = [row for _, row in scored[: options.final_limit]]
+            # Irrelevant or unsafe candidates must not fan out through evidence.
+            source_map = self._source_map(conn, [row['id'] for row in selected_rows],
+                                          limit=options.source_reference_limit)
 
             cards_by_id: dict[UUID, dict[str, Any]] = {}
             for row in selected_rows:
@@ -330,7 +332,7 @@ class RecallCompiler:
         ).fetchall()
         return {row["card_id"] for row in rows}
 
-    def _source_map(self, conn, card_ids: list[UUID]) -> dict[UUID, list[dict[str, Any]]]:
+    def _source_map(self, conn, card_ids: list[UUID], *, limit: int = 256) -> dict[UUID, list[dict[str, Any]]]:
         if not card_ids:
             return {}
         rows = conn.execute(
@@ -340,9 +342,13 @@ class RecallCompiler:
             JOIN evidence e ON e.tenant_id=cs.tenant_id AND e.id=cs.evidence_id
             WHERE cs.tenant_id=%s AND cs.card_id = ANY(%s) AND e.status <> 'deleted'
             ORDER BY e.occurred_at, e.id
+            LIMIT %s
             """,
-            (self.tenant_id, card_ids),
+            (self.tenant_id, card_ids, limit + 1),
         ).fetchall()
+        if len(rows) > limit:
+            # The extra row only detects overflow: no half provenance is emitted.
+            raise RecallWorkLimitExceeded('source_reference_limit')
         result: dict[UUID, list[dict[str, Any]]] = {}
         for row in rows:
             result.setdefault(row["card_id"], []).append(

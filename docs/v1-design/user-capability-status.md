@@ -10,10 +10,10 @@
 | 不把重复讲述当多件事 | 同请求同幂等键重放一个身份，语义卡按规范身份去重 | 不同日期/陪同角色、共享provider key的三次经历在实际host保存中保持独立；不同原文的同一次经历仍未验证自动识别合并，不能据此保证自动归并质量 |
 | 改正或忘掉已保存内容 | 已测新操作的更正、删除、来源撤销、派生失效、旧快照拒绝与合法剩余支持重建 | 升级前历史删除回补、备份物理清除和真实生产全部交错仍未验收 |
 | 记忆随生活变化而整理 | 事件增量、追平、版本绑定的局部派生及可见waiting/retry/dead已有隔离证据；来源不足的候选不强绑 | 泛化新生活线索发现尚未实现，慢人物/关系理解与长期连续性不能宣称已稳定可用 |
-| 每次取回有大小和时间边界 | 默认完整context16KiB/展开64KiB；整体省略/引用或静态拒绝；800ms协作式工作deadline及真实SQL取消已验 | 严格墙钟、中间来源/增量/高连接工作量与内存硬界未过；调用方额外包装另计 |
+| 每次取回有大小和时间边界 | 默认完整context16KiB/展开64KiB；整体省略/引用或静态拒绝；800ms协作式工作deadline及真实SQL取消已验 | 选中卡片的来源引用传输/装配有总256行上限，超限整次拒绝；严格墙钟、增量/派生/trace等全部工作量与内存硬界未过，调用方额外包装另计 |
 | 长期、多设备、多用户运行 | 核心租户门禁/RLS、受限角色、发行包迁移、小规模合成恢复及进程接续有证据；有显式快照释放和保留dry-run | 真实服务端身份/跨设备、生产RPO/RTO、长期增长治理、自动清理和生产恢复门尚未完成 |
 
-具体证据复用[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
+具体证据复用[生活输入质量补项](life-input-quality-gate.md)、[可信边界](trust-boundaries.md)、[删除与重观察](deletion-reobservation-rebuild.md)、[派生版本绑定](projection-input-binding.md)、[维护可靠性](maintenance-reliability.md)、[审阅合成闭环](reviewed-synthetic-demo.md)、[旧cue](recall-seed-candidates.md)、[返回预算](recall-return-limits.md)、[来源引用工作门](recall-source-work.md)、[本批中文查询](chinese-recall-cases.md)、[规模基线](../../benchmarks/bounded_local_scale/README.md)和[打包迁移](installed-migrations.md)。原一次真实GLM小试权限已消耗且为synthetic_extraction_mismatch，不能把合成adapter/诊断通过当作真实提取通过。
 
 ## 最高优先级三项
 
@@ -21,4 +21,4 @@
 2. **完成长期召回实用性与完整工作量门（原第三优先，当前继续项）。** 中文长历史/同义与重复不同表述仍开放；候选、来源、pending增量及高连接邻域的完整工作量上限也未完成。保持空历史、出处、边界与不确定性，先选有限真实缺口，不以四字片段或小组全绿替代泛化验收。
 3. **完成真实长期运行门（原第四优先）。** 服务端不可伪造的tenant身份、真实受限角色和跨设备路径；确认任务/快照/版本增长政策及删除后的备份恢复语义；预先确定生产容量、延迟与RPO/RTO后验收。现有保留dry-run、包迁移和小规模恢复不等于长期治理完成。
 
-第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮先回第二优先补近似不同事实的实际保存门，泛化真实提取仍未验收；下一轮按第三优先先复用已有证据选一个有限高连接来源/增量工作量反例，仍无真实模型、凭据、生活库、部署或合并授权。
+第一优先的已验收纠正/删除底线持续作为这些工作的守卫，不重新发散体检。本轮先回第二优先补近似不同事实的实际保存门，泛化真实提取仍未验收；下一轮按第三优先先复用已有证据选pending增量/read-before-use追平的有限工作量反例，仍无真实模型、凭据、生活库、部署或合并授权。

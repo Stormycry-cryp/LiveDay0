@@ -52,6 +52,7 @@ class RecallOptions:
     timeout_ms: int = 800
     context_byte_limit: int = 16_384
     expansion_byte_limit: int = 65_536
+    source_reference_limit: int = 256
     simulate_vector_timeout: bool = False
     query_embedding: tuple[float, ...] | None = None
 
@@ -59,6 +60,7 @@ class RecallOptions:
         for name, maximum in (
             ('card_token_limit', 65_536), ('context_token_limit', 262_144),
             ('context_byte_limit', 1_048_576), ('expansion_byte_limit', 1_048_576),
+            ('source_reference_limit', 4096),
             ('timeout_ms', 10_000), ('candidate_limit', 512),
             ('relation_limit', 512), ('final_limit', 512), ('per_relation_family_limit', 512),
         ):

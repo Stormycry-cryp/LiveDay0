@@ -80,6 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
     recall.add_argument("--context-bytes", type=int, default=16_384)
     recall.add_argument("--context-tokens", type=int, default=1600)
     recall.add_argument("--timeout-ms", type=int, default=800)
+    recall.add_argument("--source-refs", type=int, default=256)
 
     expand = sub.add_parser("expand-snapshot", help="read one complete bounded pinned card")
     expand.add_argument("tenant_id")
@@ -156,6 +157,7 @@ def main(argv: list[str] | None = None) -> None:
                     current_evidence_ids=[UUID(value) for value in args.current_evidence],
                     options=RecallOptions(simulate_vector_timeout=args.simulate_vector_timeout,
                         context_byte_limit=args.context_bytes, context_token_limit=args.context_tokens,
+                        source_reference_limit=args.source_refs,
                         timeout_ms=args.timeout_ms))
             else:
                 result = service.expand_snapshot(UUID(args.snapshot_id), UUID(args.item_id),

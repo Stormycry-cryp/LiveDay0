@@ -51,6 +51,10 @@ class RecallBudgetExceeded(RecallLimitError):
     code = 'recall_budget_exceeded'
 
 
+class RecallWorkLimitExceeded(RecallLimitError):
+    code = 'recall_work_limit_exceeded'
+
+
 class RecallDeadlineExceeded(RecallLimitError):
     code = 'recall_deadline_exceeded'
 
