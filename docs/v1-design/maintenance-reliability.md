@@ -44,4 +44,25 @@ waiting 不在 worker 的到期查询中，反复轮询、`make_pending_ready` �
 
 真实 PostgreSQL 反例覆盖：除零/CHECK 后目标回滚且错误持久；三次真实异常终止；无新输入时等待后补输出/追赶/绑定重建；重复通知与跨等待保存失败预算；错误终态不被增量、删除清理或输出绕过；正常进程退出后另一个进程接续；迁移保留历史并拒绝丢弃等待/预算。保留先前删除、重存、重建、租户锁序与 acceptance 回归，旧状态断言按等待合同机械更新。
 
-这些是隔离合成测试，不是生产容量、崩溃恢复指标或真实模型质量验收。CLI `run-jobs` 能输出等待/终态及原因，数据库可查询状态；尚无独立任务查询页面、告警或通用运维平台。候选发现语义仍未实现。普通 observe/复合写合同见 [冻结写入](frozen-writes.md)，新建和普通投影版本绑定见 [投影输入绑定](projection-input-binding.md)。来源提取、生产与模型质量仍是独立范围。
+这些是隔离合成测试，不是生产容量、崩溃恢复指标或真实模型质量验收。候选发现语义仍未实现。普通 observe/复合写合同见 [冻结写入](frozen-writes.md)，新建和普通投影版本绑定见 [投影输入绑定](projection-input-binding.md)。来源提取、生产与模型质量仍是独立范围。
+
+## 可运行入口：看到失败而不误判恢复
+
+`run-jobs` 保持原 JSON 结果；本批有 `retry` 或 `dead` 时，打印结果后以退出码 **1** 结束，脚本不能再把它当执行成功。业务 `waiting` 不属于执行失败。`[]` 和退出码 0 只表示本次没有领取到期任务，不能证明失败任务已恢复。
+
+```bash
+uv run liveday0 run-jobs "$TENANT_ID" --limit 10
+uv run liveday0 run-jobs "$TENANT_ID" --status --limit 20
+```
+
+`--status` 从同一租户读取持久未完成/失败任务，每页 1–100 项，默认 10 项；`has_more=true` 表示列表不完整。结果只含任务与目标 opaque ID、类型、状态、次数、时间、白名单等待原因、错误存在标志及安全分类。任意历史 `last_error` 正文不会返回。删除或失效清理产生、没有错误的 `dead` 不冒充执行失败；成功任务不进入该列表。状态按更新时间排序，这个有界窗口不是全库健康报告；查询退出码 0 仅表示只读查询成功。
+
+查询不领取任务、不修改预算、不唤醒 waiting 或复活 dead。出现 retry 时按已存退避再次执行；waiting 按上面的绑定输出/依赖政策继续；有错误的 dead 需先核实原因和恢复方案，本入口没有“清空次数重试”按钮。CLI tenant 参数仍是受信本地开发入口，不是服务器客户端鉴权。
+
+已有维护 SQL 回滚、有限重试和正常跨进程接续证据复用，不重跑。本轮定向 `tests/test_maintenance_cli_failures.py` 在新标记、无 TCP、受限应用角色的合成库中，写入目标版本后注入真实除零：retry/dead 非零退出；新进程空轮询后仍可查询失败；版本和 pending journal 保留，状态查询不改预算，跨租户及已删除任务不返回。末次失败预算由合成夹具预置到 2，未重复三次耗尽测试。这不是断电或提交确认丢失验收。
+
+本机已有 Python 3.13、psycopg 和 `/opt/homebrew/opt/postgresql@17/bin` 时可直接运行该单项验收；退出停止新实例并保留 `/tmp/ld0-job-cli-*` 中的 manifest 与日志：
+
+```bash
+uv run --python 3.13 --no-sync python tests/test_maintenance_cli_failures.py
+```

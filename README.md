@@ -237,6 +237,8 @@ uv run python benchmarks/benchmark_recall.py
 
 当前 `run-jobs` 是需要显式执行的本地维护入口。它还没有经过常驻后台 worker 验证。
 
+维护执行出现 `retry/dead` 会以退出码 1 结束；`run-jobs "$TENANT_ID" --status --limit 20` 可在新进程中只读查看持久未完成/失败状态。空执行结果不代表恢复完成。状态与安全重试边界见 [维护说明](./docs/v1-design/maintenance-reliability.md)。
+
 ---
 
 ## 接下来可以验证什么

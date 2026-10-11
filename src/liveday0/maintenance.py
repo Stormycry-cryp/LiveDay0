@@ -226,6 +226,29 @@ class MaintenanceEngine:
                 target_id=evidence_id, coalesce_key=f"candidate_discovery:{evidence_id}",
                 baseline_version=None, available_after_seconds=0)
 
+    def job_status(self, *, limit: int = 10) -> dict:
+        """Bounded trusted-operator read; never revive work or return memory bodies."""
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("status limit must be an integer from 1 to 100")
+        with tenant_transaction(self.tenant_id, mode="read") as conn:
+            rows = conn.execute(
+                """SELECT id AS job_id,job_type,target_kind,target_id,state,attempts,failure_count,
+                  available_at,updated_at,(last_error IS NOT NULL) AS error_present,
+                  CASE WHEN last_error='candidate_discovery_not_implemented'
+                    THEN 'candidate_discovery_not_implemented'
+                    WHEN last_error IS NOT NULL THEN 'execution_error' END AS diagnostic_code,
+                  CASE WHEN wait_reason IN ('dependency_pending','semantic_output_required',
+                    'version_bound_rebuild_required') THEN wait_reason
+                    WHEN wait_reason IS NOT NULL THEN 'unspecified_wait' END AS wait_reason
+                FROM maintenance_jobs WHERE tenant_id=%s
+                  AND state IN ('pending','running','retry','waiting','dead')
+                  AND (state<>'dead' OR last_error IS NOT NULL)
+                ORDER BY updated_at DESC,id DESC LIMIT %s""",
+                (self.tenant_id, limit + 1),
+            ).fetchall()
+        return {"jobs": rows[:limit], "has_more": len(rows) > limit,
+                "scope": "unfinished_or_failed; not a complete health assessment"}
+
     def run_ready(
         self,
         *,

@@ -82,6 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     jobs = sub.add_parser("run-jobs", help="run bounded retryable maintenance")
     jobs.add_argument("tenant_id")
     jobs.add_argument("--limit", type=int, default=10)
+    jobs.add_argument("--status", action="store_true", help="read bounded persisted unfinished/failed job metadata")
     jobs.add_argument("--fail-job-type", action="append", default=[])
     jobs.add_argument(
         "--projection-outputs",
@@ -142,6 +143,11 @@ def main(argv: list[str] | None = None) -> None:
             service.delete_card(object_id, reason_code=args.reason)
         result = {"deleted": str(object_id), "kind": args.object_kind}
     else:
+        if args.status:
+            if args.fail_job_type or args.projection_outputs:
+                raise ValueError("--status cannot execute or supply maintenance output")
+            print(_json(service.maintenance.job_status(limit=args.limit)))
+            return
         outputs = _load_json(args.projection_outputs) if args.projection_outputs else {}
         result = service.maintenance.run_ready(
             limit=args.limit,
@@ -149,6 +155,8 @@ def main(argv: list[str] | None = None) -> None:
             projection_outputs={UUID(key): value for key, value in outputs.items()},
         )
     print(_json(result))
+    if args.command == "run-jobs" and any(item["state"] in {"retry", "dead"} for item in result):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
