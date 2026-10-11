@@ -35,6 +35,8 @@ RED `/private/tmp/ld0-ordinary-journey-_k51ev0j/manifest.json`，GREEN `/private
 
 ## 剩余能力
 
+后续[条件承诺与后来反证旅程](conditional-counterevidence-journey.md)仅补一次联合历史保持验收，现有机制5/5通过、无生产修改；本批之后停止追加合成旅程，实际产品剩余项按该说明的计划表收口。
+
 有限连续性可运行，真实模型完整提取能力仍未通过。唯一旧真实小试仅有synthetic_extraction_mismatch，缺少字段值不能恢复差异，原调用授权已消耗。自动识别同一经历、普通片段的后来关联、新生活线索发现、人物/关系理解仍开放。下一有价值小项是先冻结条件承诺与后来反证的有限旅程，只补实际机制缺口，不扩回工作量审计或生产部署。
 
 运行命令（使用具备psycopg的项目测试Python，测试自行创建并停止新隔离PG）：
