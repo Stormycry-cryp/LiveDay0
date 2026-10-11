@@ -70,17 +70,27 @@ class RecallCompiler:
 
             fts_card_ids = self._fts_card_ids(conn, query, options.candidate_limit)
             vector_card_ids = self._vector_card_ids(conn, options, degraded)
+            # Discovery seeds must enter the bounded canonical envelope, including
+            # dormant events outside recent history. Shared cap avoids a second list.
+            seed_ids = sorted(fts_card_ids | vector_card_ids)
             cards = conn.execute(
                 """
+                WITH recent_ids AS (
+                  SELECT id FROM semantic_cards
+                  WHERE tenant_id=%s AND lifecycle IN ('active','provisional')
+                  ORDER BY valid_at DESC,id LIMIT %s
+                )
                 SELECT c.*, v.body
                 FROM semantic_cards c
                 JOIN semantic_card_versions v
                   ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
                 WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
-                ORDER BY c.valid_at DESC, c.id
+                  AND (c.id=ANY(%s::uuid[]) OR c.id IN (SELECT id FROM recent_ids))
+                ORDER BY (c.id=ANY(%s::uuid[])) DESC,c.valid_at DESC,c.id
                 LIMIT %s
                 """,
-                (self.tenant_id, options.candidate_limit),
+                (self.tenant_id, options.candidate_limit, self.tenant_id,
+                 seed_ids, seed_ids, options.candidate_limit),
             ).fetchall()
             source_map = self._source_map(conn, [row["id"] for row in cards])
             scored: list[tuple[float, dict]] = []
