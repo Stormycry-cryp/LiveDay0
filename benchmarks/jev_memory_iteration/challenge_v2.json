@@ -1,0 +1,533 @@
+{
+  "schema": "jev-memory-iteration-cases.v1",
+  "split": "challenge_v2",
+  "frozen_at": "2026-10-19",
+  "provenance": "New fictional Chinese material authored prospectively after first challenge was consumed. Independent validation for round 2; cannot replace earlier challenge result. No historical user data.",
+  "cases": [
+    {
+      "id": "c01",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "51ff34ba-7d22-53fc-bbcc-153677ed8089",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 57,
+          "content_digest": "sha256:10403568cba4158b9b02c1a58e7cd0ac381be1ce23568b6da81bc5a76476462d"
+        },
+        "content": "为了让新同事入职后有人带，我今天向主管提出由我负责带教。主管当面同意了，我已经接下这项职责，明早要和两位新人见面。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "8111bb7d-7dae-5845-aa78-096994f81b01",
+        "source": {
+          "source_id": "51ff34ba-7d22-53fc-bbcc-153677ed8089",
+          "source_version": "v1",
+          "content_digest": "sha256:10403568cba4158b9b02c1a58e7cd0ac381be1ce23568b6da81bc5a76476462d",
+          "span": {
+            "start": 0,
+            "end": 57,
+            "digest": "sha256:10403568cba4158b9b02c1a58e7cd0ac381be1ce23568b6da81bc5a76476462d"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天接受新人带教职责"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "3446a818-9b39-549d-b874-4c6e8673dfd1"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "为了让新同事入职后有人带，我提出负责带教",
+            "current_result": "主管今天当面同意，我已经接下带教职责",
+            "unfinished_future": "明早和两位新人见面"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "3446a818-9b39-549d-b874-4c6e8673dfd1",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "work_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c02",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "b3b0b356-ef5a-58a7-ac7b-62e01089c7a6",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 78,
+          "content_digest": "sha256:dcf194314ec8a5e187ebeed32dedbbd317afc0e65e1501f0759410a55d3dd2e9"
+        },
+        "content": "10月12日我和同事若川商量这次读书分享会，她负责找场地，我负责邀请讲者。今天是10月19日，我接着筹备同一场分享会：讲者已答应参加，我把时间同步给了若川。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "0f96ee61-10de-5481-8c26-7da3cdb596a7",
+        "source": {
+          "source_id": "b3b0b356-ef5a-58a7-ac7b-62e01089c7a6",
+          "source_version": "v1",
+          "content_digest": "sha256:dcf194314ec8a5e187ebeed32dedbbd317afc0e65e1501f0759410a55d3dd2e9",
+          "span": {
+            "start": 0,
+            "end": 78,
+            "digest": "sha256:dcf194314ec8a5e187ebeed32dedbbd317afc0e65e1501f0759410a55d3dd2e9"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "10月12日开始筹备的同一场读书分享会后续"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "55f7f3fc-f9d9-5cc9-a217-ee90b6608e0a"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "继续筹备10月12日与若川商定的同一场读书分享会",
+            "current_result": "今天10月19日讲者已答应参加，我已把时间同步给若川"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "55f7f3fc-f9d9-5cc9-a217-ee90b6608e0a",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "3647b79c-b673-53be-8336-900785a3d4aa",
+          "version": 1,
+          "type": "event",
+          "body": {
+            "goal_context": "10月12日我与同事若川筹备这次读书分享会",
+            "current_result": "若川负责找场地，我负责邀请讲者"
+          },
+          "valid_at": "2026-10-12T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "existing_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": "3647b79c-b673-53be-8336-900785a3d4aa",
+        "groups": [
+          "positive_event",
+          "work_event",
+          "existing_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c03",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "6412720e-17e9-5504-bd83-f4427f73d10e",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 50,
+          "content_digest": "sha256:e94c2863994f444bd68f00f71ad165041390101173392d8842790e17a42b64c4"
+        },
+        "content": "今天早上我跟往常一样换掉毛巾，把床铺平，热了昨晚剩下的粥当早饭，然后出门。这些都是平常每天做的小事。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "72e4620d-5c03-5109-b7a5-9f9e3ce20cb2",
+        "source": {
+          "source_id": "6412720e-17e9-5504-bd83-f4427f73d10e",
+          "source_version": "v1",
+          "content_digest": "sha256:e94c2863994f444bd68f00f71ad165041390101173392d8842790e17a42b64c4",
+          "span": {
+            "start": 0,
+            "end": 50,
+            "digest": "sha256:e94c2863994f444bd68f00f71ad165041390101173392d8842790e17a42b64c4"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天早晨的例行起居"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "883aa4d0-da75-546e-bf48-f03309aa9549"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "今天早晨跟往常一样准备起床和早餐",
+            "current_result": "换毛巾、铺床、热剩粥吃早饭，然后出门"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "883aa4d0-da75-546e-bf48-f03309aa9549",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "trace_only",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "trace"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c04",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "2617b4fe-ae54-5412-aac8-59f70f59e408",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 66,
+          "content_digest": "sha256:280407fdaedeb5bb62642ea21c80d01597f4fb1b8636dcccb3d72c0cc6db3153"
+        },
+        "content": "这是一段音频格式资料：PCM 用离散采样表示声音，采样率表示每秒采样次数，位深表示每个采样的量化精度。这里只解释术语，没有人的经历。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "12b9302f-0ffd-5c70-a0ac-6528a4e26175",
+        "source": {
+          "source_id": "2617b4fe-ae54-5412-aac8-59f70f59e408",
+          "source_version": "v1",
+          "content_digest": "sha256:280407fdaedeb5bb62642ea21c80d01597f4fb1b8636dcccb3d72c0cc6db3153",
+          "span": {
+            "start": 0,
+            "end": 66,
+            "digest": "sha256:280407fdaedeb5bb62642ea21c80d01597f4fb1b8636dcccb3d72c0cc6db3153"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "这段音频格式术语资料"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "42b6055c-d9d5-5efc-9cf9-db69d6670dcb"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "解释 PCM、采样率和位深的术语",
+            "current_result": "资料描述了离散采样、每秒采样次数和采样量化精度"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "42b6055c-d9d5-5efc-9cf9-db69d6670dcb",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "outside_scope",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "outside"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c05",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "8fedeeca-c1a0-52e0-8892-a447f44ffb10",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 49,
+          "content_digest": "sha256:ea65a5d5c321a7521543835eeccee4be3c6f0fbde9a3fc25ba1148f94a991209"
+        },
+        "content": "我今天再次打电话确认周末的陶艺体验课，店员明确说课程仍然按原计划举行，没有取消；我也还保留着预约。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "098505e0-7394-592d-9b2b-4fccd3948cad",
+        "source": {
+          "source_id": "8fedeeca-c1a0-52e0-8892-a447f44ffb10",
+          "source_version": "v1",
+          "content_digest": "sha256:ea65a5d5c321a7521543835eeccee4be3c6f0fbde9a3fc25ba1148f94a991209",
+          "span": {
+            "start": 0,
+            "end": 49,
+            "digest": "sha256:ea65a5d5c321a7521543835eeccee4be3c6f0fbde9a3fc25ba1148f94a991209"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天确认陶艺体验课是否照常举行"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "234949b1-c657-5d0a-ace7-1d3ceff453dc"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "确认周末陶艺体验课安排",
+            "current_result": "店员今天明确通知课程已经取消，我的预约也被取消"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "234949b1-c657-5d0a-ace7-1d3ceff453dc",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "needs_review",
+        "source_support_allowed": [
+          "contradicted"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "forbidden_write"
+        ],
+        "safety_assertion": "来源明确照常举行且预约仍保留；提案声称课程与预约均已取消，必须拒写。"
+      }
+    },
+    {
+      "id": "c06",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "bc1dc980-73e6-5646-96b3-080d9f0bea53",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 65,
+          "content_digest": "sha256:ce8a6c50dd6fb22bae52046a3c0242ee9c4d0206f3e5fe66cbebe799b1d2093f"
+        },
+        "content": "9月21日我独自到北边的湖边观鸟。今天10月19日是另外一次出行，我第一次和父亲去城南湿地观鸟，我们在那里看到白鹭，午后一起回家。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "3ea74a3f-bfa9-5ae3-8d0e-3c759f28bc91",
+        "source": {
+          "source_id": "bc1dc980-73e6-5646-96b3-080d9f0bea53",
+          "source_version": "v1",
+          "content_digest": "sha256:ce8a6c50dd6fb22bae52046a3c0242ee9c4d0206f3e5fe66cbebe799b1d2093f",
+          "span": {
+            "start": 0,
+            "end": 65,
+            "digest": "sha256:ce8a6c50dd6fb22bae52046a3c0242ee9c4d0206f3e5fe66cbebe799b1d2093f"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天首次与父亲到城南湿地观鸟的出行"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "62bce0ff-3ded-5c91-ba7b-0a085e34e3ec"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "今天10月19日第一次与父亲到城南湿地观鸟",
+            "current_result": "我和父亲在那里看到白鹭，午后一起回家",
+            "boundaries": "与9月21日独自去北边湖边观鸟是不同出行"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "62bce0ff-3ded-5c91-ba7b-0a085e34e3ec",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "4a2073d0-9a94-5f41-93c0-de8946cbee80",
+          "version": 1,
+          "type": "event",
+          "body": {
+            "goal_context": "9月21日我独自去北边湖边观鸟",
+            "current_result": "完成独自观鸟的出行"
+          },
+          "valid_at": "2026-09-21T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,701 @@
+{
+  "schema": "jev-memory-iteration-cases.v1",
+  "split": "dev",
+  "frozen_at": "2026-10-19",
+  "provenance": "New fictional Chinese material, authored for this finite evaluation; no historical user data.",
+  "cases": [
+    {
+      "id": "c01",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "e2ec0fb4-5b21-5df1-86e3-e5dbffa48933",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 40,
+          "content_digest": "sha256:90a7fb39905062e01635de9c48396301ccac121118539e038f53b40b5c08dc20"
+        },
+        "content": "今天我从旧公寓搬进新租的房子，搬家公司已经把家具送到；我终于不用每天跨城通勤了。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "2e02918b-8f73-5e8b-9086-86b31943927e",
+        "source": {
+          "source_id": "e2ec0fb4-5b21-5df1-86e3-e5dbffa48933",
+          "source_version": "v1",
+          "content_digest": "sha256:90a7fb39905062e01635de9c48396301ccac121118539e038f53b40b5c08dc20",
+          "span": {
+            "start": 0,
+            "end": 40,
+            "digest": "sha256:90a7fb39905062e01635de9c48396301ccac121118539e038f53b40b5c08dc20"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "本次搬家"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "68cc8d5f-9da6-5f0a-a0ca-bb30bafe2ffb"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "搬到靠近工作地点的新租房",
+            "current_result": "今天已搬入，家具送达，不再需要每天跨城通勤"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "68cc8d5f-9da6-5f0a-a0ca-bb30bafe2ffb",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c02",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "8c9e05a5-fde5-5c2a-92b2-d01e1faed2a7",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 49,
+          "content_digest": "sha256:d13632fd590701bef6911e9a393ce332befc761153711d5c68fa7942cd78de2c"
+        },
+        "content": "今天我主持青禾项目评审，发现方案会增加客服负担。我决定推迟上线一周，并承担重新协调两组排期的工作。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "235b3e7d-f355-5c08-bb0d-44b3787e4676",
+        "source": {
+          "source_id": "8c9e05a5-fde5-5c2a-92b2-d01e1faed2a7",
+          "source_version": "v1",
+          "content_digest": "sha256:d13632fd590701bef6911e9a393ce332befc761153711d5c68fa7942cd78de2c",
+          "span": {
+            "start": 0,
+            "end": 49,
+            "digest": "sha256:d13632fd590701bef6911e9a393ce332befc761153711d5c68fa7942cd78de2c"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "本次青禾项目评审及延期决定"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "47955070-d443-5e35-9659-95e057c497f1"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "主持青禾项目评审并协调上线",
+            "current_result": "决定推迟上线一周，承担重新协调两组排期",
+            "causal_turn": "发现方案会增加客服负担"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "47955070-d443-5e35-9659-95e057c497f1",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "work_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c03",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "71752a23-3db7-5e7e-aa30-d472c005e479",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 51,
+          "content_digest": "sha256:a857e6d5292a2d6e9943c9a95cc286996e9a43a7577622724cb5ec58807d4b6d"
+        },
+        "content": "接着昨天那次青禾项目评审说：今天我把延期后的排期和两组都谈妥了，双方同意下周三再验收，我心里踏实多了。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "40b068bb-748f-597f-9575-ea14377d1170",
+        "source": {
+          "source_id": "71752a23-3db7-5e7e-aa30-d472c005e479",
+          "source_version": "v1",
+          "content_digest": "sha256:a857e6d5292a2d6e9943c9a95cc286996e9a43a7577622724cb5ec58807d4b6d",
+          "span": {
+            "start": 0,
+            "end": 51,
+            "digest": "sha256:a857e6d5292a2d6e9943c9a95cc286996e9a43a7577622724cb5ec58807d4b6d"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "昨天评审引出的延期协调进展"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "89d8e7ec-a336-5021-a77f-1669ebfe21f2"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "推进昨天青禾评审后的延期协调",
+            "current_result": "今天两组同意延期排期，下周三再验收，我更踏实了"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "89d8e7ec-a336-5021-a77f-1669ebfe21f2",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "3d920fda-56bd-565e-a566-924dab9f629b",
+          "version": 2,
+          "type": "event",
+          "body": {
+            "goal_context": "昨天主持青禾项目评审",
+            "current_result": "因客服负担决定推迟一周，我负责协调两组"
+          },
+          "valid_at": "2026-10-19T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "existing_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": "3d920fda-56bd-565e-a566-924dab9f629b",
+        "groups": [
+          "positive_event",
+          "work_event",
+          "existing_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c04",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "870d4daf-6d02-51f6-8e03-e21412b45d4c",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 59,
+          "content_digest": "sha256:ad535d16b4b87e81eac3d7bf07d05806e9805ead2a524d43c2dfb0380069b2f9"
+        },
+        "content": "青禾项目今天又发生了另一件事：仓库停电导致发货中断。我临时联系备用仓，傍晚恢复发货。这和上周页面评审延期没有因果关系。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "3953ffb2-b031-57f0-9d63-4febb86ac649",
+        "source": {
+          "source_id": "870d4daf-6d02-51f6-8e03-e21412b45d4c",
+          "source_version": "v1",
+          "content_digest": "sha256:ad535d16b4b87e81eac3d7bf07d05806e9805ead2a524d43c2dfb0380069b2f9",
+          "span": {
+            "start": 0,
+            "end": 59,
+            "digest": "sha256:ad535d16b4b87e81eac3d7bf07d05806e9805ead2a524d43c2dfb0380069b2f9"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天仓库停电与恢复发货"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "d428bfd6-f9e7-53b4-80a8-3cac57112391"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "处理青禾项目仓库停电造成的发货中断",
+            "current_result": "我联系备用仓，傍晚恢复发货",
+            "boundaries": "与上周页面评审延期没有因果关系"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "d428bfd6-f9e7-53b4-80a8-3cac57112391",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "ca397941-726f-559d-862d-b02cef0d54c7",
+          "version": 2,
+          "type": "event",
+          "body": {
+            "goal_context": "上周青禾页面评审",
+            "current_result": "我因页面方案增加客服负担而推迟上线"
+          },
+          "valid_at": "2026-10-19T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "work_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c05",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "ecbb93e6-b357-5d6a-92af-e5e3300940b1",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 72,
+          "content_digest": "sha256:7822f36be65c8cf284eb373d5aded3b9918b8d9d73a923eed11d9ff5a6430f3f"
+        },
+        "content": "下面是技术资料摘录：PostgreSQL 的 B-tree 索引支持等值与范围查询，VACUUM 回收失效元组所占空间。这段只是在讲数据库原理。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "32e66ac0-325f-57db-96b6-4765e061e646",
+        "source": {
+          "source_id": "ecbb93e6-b357-5d6a-92af-e5e3300940b1",
+          "source_version": "v1",
+          "content_digest": "sha256:7822f36be65c8cf284eb373d5aded3b9918b8d9d73a923eed11d9ff5a6430f3f",
+          "span": {
+            "start": 0,
+            "end": 72,
+            "digest": "sha256:7822f36be65c8cf284eb373d5aded3b9918b8d9d73a923eed11d9ff5a6430f3f"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "这段数据库技术资料"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "0d54cc46-82cd-57ec-934b-64e11da1a739"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "说明数据库索引和空间回收机制",
+            "current_result": "资料介绍 B-tree 的查询用途与 VACUUM 的作用"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "0d54cc46-82cd-57ec-934b-64e11da1a739",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "outside_scope",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "outside"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c06",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "eed1a7ee-1634-5088-9732-3986e1d05dad",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 45,
+          "content_digest": "sha256:3ff5f13480767acfa4800c2b66e8c09f980c6a7e75cf923588e0815c37fb8aa8"
+        },
+        "content": "今天上班前我像平常一样在楼下买了杯美式，边喝边等电梯，然后照常开始工作，没有发生特别的事。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "b9b9fe8a-1868-5d39-b76f-119fde8f51c3",
+        "source": {
+          "source_id": "eed1a7ee-1634-5088-9732-3986e1d05dad",
+          "source_version": "v1",
+          "content_digest": "sha256:3ff5f13480767acfa4800c2b66e8c09f980c6a7e75cf923588e0815c37fb8aa8",
+          "span": {
+            "start": 0,
+            "end": 45,
+            "digest": "sha256:3ff5f13480767acfa4800c2b66e8c09f980c6a7e75cf923588e0815c37fb8aa8"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天上班前喝咖啡的片刻"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "dfba3cf0-8cff-5d13-b379-ac4c04f7c060"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "今天上班前的普通早晨",
+            "current_result": "我在楼下买美式，等电梯后照常工作"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "dfba3cf0-8cff-5d13-b379-ac4c04f7c060",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "trace_only",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "trace"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c07",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "59acfc6e-980c-5e3f-8ca3-9674d55c8682",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 35,
+          "content_digest": "sha256:15cde5366f8b1f015735def730931caa61a220cbb2f8c96d59d1407359c6441d"
+        },
+        "content": "今天我提议把青禾项目验收改到周五，但负责人还没回复，现在日期仍未确认。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "4d598de3-7d12-512f-89b1-ffbd68532915",
+        "source": {
+          "source_id": "59acfc6e-980c-5e3f-8ca3-9674d55c8682",
+          "source_version": "v1",
+          "content_digest": "sha256:15cde5366f8b1f015735def730931caa61a220cbb2f8c96d59d1407359c6441d",
+          "span": {
+            "start": 0,
+            "end": 35,
+            "digest": "sha256:15cde5366f8b1f015735def730931caa61a220cbb2f8c96d59d1407359c6441d"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天验收改期提议"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "60ff2edd-0cc9-5fca-8e95-07d93c3e4627"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "调整青禾项目验收日期",
+            "current_result": "负责人已确认周五验收"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "60ff2edd-0cc9-5fca-8e95-07d93c3e4627",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "needs_review",
+        "source_support_allowed": [
+          "contradicted",
+          "unsupported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "forbidden_write"
+        ],
+        "safety_assertion": "不得将未确认的改期写成负责人已确认；应拒绝该提案并进入复核。"
+      }
+    },
+    {
+      "id": "c08",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "4c2411aa-8180-51aa-9f5c-2c4e83b758d2",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 44,
+          "content_digest": "sha256:583d047648f2031d66b6b7a57c51ed34411dc19d093682d381bea74eff9bd4aa"
+        },
+        "content": "如果周四前拿到供应商的样品，我就答应周五帮小岚拍宣传照；样品不到的话，我不承诺周五能拍。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "9ea0aece-11be-5578-b7fb-d724442ff41d",
+        "source": {
+          "source_id": "4c2411aa-8180-51aa-9f5c-2c4e83b758d2",
+          "source_version": "v1",
+          "content_digest": "sha256:583d047648f2031d66b6b7a57c51ed34411dc19d093682d381bea74eff9bd4aa",
+          "span": {
+            "start": 0,
+            "end": 44,
+            "digest": "sha256:583d047648f2031d66b6b7a57c51ed34411dc19d093682d381bea74eff9bd4aa"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "commitment",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "这次给小岚拍宣传照的条件承诺"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "fefdf033-0488-5b72-b553-0a4d1c4c8fa3"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "prospective",
+          "body": {
+            "item": "我答应周五帮小岚拍宣传照",
+            "status": "committed"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "fefdf033-0488-5b72-b553-0a4d1c4c8fa3",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "needs_review",
+        "source_support_allowed": [
+          "contradicted",
+          "unsupported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "forbidden_write"
+        ],
+        "safety_assertion": "不得去掉周四前收到样品的条件；无条件承诺提案必须拒写。"
+      }
+    }
+  ]
+}

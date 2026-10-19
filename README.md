@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](./pyproject.toml)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](./migrations/001_initial.up.sql)
-[![Tests](https://img.shields.io/badge/Tests-19_passed-10B981?style=for-the-badge)](./docs/benchmarks/v1-local-baseline.md)
+[![Portable tests](https://img.shields.io/badge/Portable_tests-628_passed-10B981?style=for-the-badge)](./docs/v1-design/jev-memory-iteration.md)
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular_Monolith-8B5CF6?style=flat-square)
 ![Isolation](https://img.shields.io/badge/Isolation-PostgreSQL_RLS-2563EB?style=flat-square)
@@ -157,7 +157,7 @@ uv run liveday0 recall "$TENANT_ID" "花生 饮食"
 
 召回默认完整包16384 bytes、800ms协作式执行预算；完整展开默认65536 bytes。超限有静态错误/退出码，省略卡保留可调用句柄；具体配置、出处保护、连接地址要求与墙钟限制见[返回包与执行预算](./docs/v1-design/recall-return-limits.md)。
 
-可选的 [Jev 记忆判断接入](./docs/v1-design/jev-memory-decisions.md)将分类、已有事件/新事件/普通痕迹/范围外/无法确定、来源支持和召回相关性交给模型，问题和选项由代码生成。默认 CLI 仍使用原有路径；宿主显式配置 `MemoryJudgments` 后可使用新的 `capture` 与语义召回。生成式提取器仍由宿主提供，当前未验证真实 Jev 的判断质量。
+可选的 [Jev 记忆判断接入](./docs/v1-design/jev-memory-decisions.md)将分类、事件归属、来源支持和召回选择交给 BeatAPI Jev，代码生成中文问题和选项，直接采用概率最高的结果。工作经历属于生活事件，普通日常可保留轻量痕迹。默认 CLI 仍使用原有路径；宿主显式配置 `MemoryJudgments` 后可使用 `capture` 与语义召回。生成式提取器仍由宿主提供，有限虚构材料的实际结果及未确认范围见 [自迭代验证](./docs/v1-design/jev-memory-iteration.md)。
 
 调用方负责提出范围明确的语义内容或派生视图替代主体，内核检查来源、租户、版本、生命周期和依赖；保存授权、删除和数据库写入继续由代码控制。
 

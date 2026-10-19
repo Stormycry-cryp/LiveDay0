@@ -27,18 +27,18 @@ def scripted_judgment_server():
             seen.append((self.path, dict(self.headers), payload))
             answers = {}
             for name, question in payload['questions'].items():
-                if question['type'] == 'choice':
-                    choices = {'disposition': 'keep', 'speech_mode': 'direct_statement',
-                               'subject': 'user', 'persistence': 'durable', 'category': 'event',
-                               'source_support': 'supported',
-                               'event_assignment': 'candidate_0' if payload['state'].get('candidates') else 'new_event'}
-                    chosen = choices[name]
-                    answers[name] = {'type': 'choice', 'choice': chosen, 'confidence': 1,
-                                     'probabilities': {option: int(option == chosen) for option in question['criteria']}}
+                assert question['type'] == 'choice'
+                choices = {'disposition': 'keep', 'speech_mode': 'direct_statement',
+                           'subject': 'user', 'persistence': 'durable', 'category': 'event',
+                           'source_support': 'supported'}
+                if name.startswith('event_candidate_'):
+                    chosen = 'same_event'
+                elif name.startswith('candidate_'):
+                    chosen = 'use' if name == 'candidate_0' else 'skip'
                 else:
-                    answers[name] = {'type': 'score', 'score': 3, 'confidence': 1,
-                                     'legend': {str(i): value for i, value in enumerate(question['criteria'])},
-                                     'probabilities': {str(i): int(i == 3) for i in range(4)}}
+                    chosen = choices[name]
+                answers[name] = {'type': 'choice', 'choice': chosen, 'confidence': 0.01,
+                                 'probabilities': {option: int(option == chosen) for option in question['criteria']}}
             body = json.dumps({'id': 'task_synthetic_integration', 'model': MODEL, 'answers': answers,
                                'usage': {'input_tokens': 1, 'output_tokens': 1}}).encode()
             self.send_response(200)
@@ -78,7 +78,11 @@ def test_capture_append_replay_and_recall_over_http(service):
         assert created['route'] == 'new_event' and appended['route'] == 'existing_event'
         assert appended['event_id'] == created['card_ids'][0]
         assert len(seen) == 2
-        assert all(len(payload['questions']) == 7 for _, _, payload in seen)
+        assert [len(payload['questions']) for _, _, payload in seen] == [6, 7]
+        assert not any(name.startswith('event_candidate_') for name in seen[0][2]['questions'])
+        assert seen[1][2]['questions']['event_candidate_0']['type'] == 'choice'
+        assert set(seen[1][2]['questions']['event_candidate_0']['criteria']) == {
+            'same_event', 'different_event', 'uncertain'}
         replay = configured.capture(second, extractor=adapter)['outcomes'][0]
         assert replay['status'] == 'duplicate' and len(seen) == 2
         context = configured.recall('朋友帮忙搬家进展')
@@ -92,6 +96,16 @@ def test_capture_append_replay_and_recall_over_http(service):
     assert list(seen[1][2]['state']['candidates']) == ['candidate_0']
     assert 'id' not in seen[1][2]['state']['candidates']['candidate_0']
     assert list(seen[-1][2]['questions']) == ['candidate_0']
+    assert seen[-1][2]['questions']['candidate_0']['type'] == 'choice'
+    assert set(seen[-1][2]['questions']['candidate_0']['criteria']) == {'use', 'skip', 'uncertain'}
+    for _, _, payload in seen[:2]:
+        assert set(payload['state']) == {'source_span_text', 'observed_at', 'claim', 'candidates'}
+        assert set(payload['state']['claim']) == {'kind', 'content', 'applies_to', 'valid_at'}
+        assert payload['state']['claim']['kind'] == 'event'
+        assert payload['state']['claim']['content']['current_result']
+        assert payload['state']['source_span_text']
+        for private in ['source_id', 'digest', 'producer', 'canonical_key', 'request', 'proposal']:
+            assert f'"{private}":' not in json.dumps(payload['state'])
     with tenant_transaction(service.tenant_id, mode='read') as conn:
         assert conn.execute('SELECT count(*) AS n FROM semantic_cards').fetchone()['n'] == 1
         assert conn.execute('SELECT count(*) AS n FROM evidence').fetchone()['n'] == 2
