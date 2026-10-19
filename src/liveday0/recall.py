@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 import re
 from hashlib import sha256
 from datetime import datetime
@@ -11,7 +12,7 @@ from psycopg.types.json import Jsonb
 
 from liveday0.db import tenant_transaction
 from liveday0.exceptions import NotFound, SnapshotInvalidated, RecallBudgetExceeded, RecallWorkLimitExceeded
-from liveday0.recall_limits import check_deadline, recall_json, wire_bytes, pending_delta_fetch_limit, consume_pending_deltas, derived_input_fetch_limit, consume_derived_inputs
+from liveday0.recall_limits import deadline_scope, check_deadline, recall_json, wire_bytes, pending_delta_fetch_limit, consume_pending_deltas, derived_input_fetch_limit, consume_derived_inputs
 from liveday0.types import RecallOptions
 
 
@@ -35,10 +36,18 @@ ESSENTIAL_FIELDS = {
     "prospective": ("item", "trigger", "expected_window", "status", "boundaries", "uncertainty"),
 }
 
+EFFECTIVE_CURRENT_SQL = """COALESCE((
+    SELECT d.delta->'current' FROM event_deltas d
+    WHERE d.tenant_id=c.tenant_id AND d.event_id=c.id AND d.state='pending'
+      AND d.delta ? 'current'
+    ORDER BY d.created_at DESC,d.id DESC LIMIT 1
+), v.body->'current')"""
+
 
 class RecallCompiler:
-    def __init__(self, tenant_id: UUID):
+    def __init__(self, tenant_id: UUID, *, selector=None):
         self.tenant_id = tenant_id
+        self.selector = selector
 
     def compile(
         self,
@@ -46,53 +55,14 @@ class RecallCompiler:
         *,
         current_evidence_ids: list[UUID],
         options: RecallOptions,
+        selected_ids: list[str] | None = None,
+        expected_revision: int | None = None,
     ) -> dict[str, Any]:
         with tenant_transaction(self.tenant_id, mode="read") as conn:
-            tenant = conn.execute(
-                "SELECT revision FROM tenants WHERE id=%s",
-                (self.tenant_id,),
-            ).fetchone()
-            if not tenant:
-                raise NotFound("tenant not found")
-            degraded: list[str] = []
-            unsafe_ids = {
-                row["event_id"] for row in conn.execute(
-                    """SELECT DISTINCT d.event_id FROM event_deltas d
-                    JOIN semantic_cards c ON c.tenant_id=d.tenant_id AND c.id=d.event_id
-                    WHERE d.tenant_id=%s AND d.state='pending'
-                      AND d.delta @> '{"requires_restructure": true}'::jsonb
-                      AND c.lifecycle IN ('active','provisional')""", (self.tenant_id,)
-                )
-            }
-            if unsafe_ids:
-                degraded.append("unsafe_events_not_caught_up")
-            if options.simulate_vector_timeout:
-                degraded.append("vector_candidate_timeout")
-
-            fts_card_ids = self._fts_card_ids(conn, query, options.candidate_limit)
-            vector_card_ids = self._vector_card_ids(conn, options, degraded)
-            # Discovery seeds must enter the bounded canonical envelope, including
-            # dormant events outside recent history. Shared cap avoids a second list.
-            seed_ids = sorted(fts_card_ids | vector_card_ids)
-            cards = conn.execute(
-                """
-                WITH recent_ids AS (
-                  SELECT id FROM semantic_cards
-                  WHERE tenant_id=%s AND lifecycle IN ('active','provisional')
-                  ORDER BY valid_at DESC,id LIMIT %s
-                )
-                SELECT c.*, v.body
-                FROM semantic_cards c
-                JOIN semantic_card_versions v
-                  ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
-                WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
-                  AND (c.id=ANY(%s::uuid[]) OR c.id IN (SELECT id FROM recent_ids))
-                ORDER BY (c.id=ANY(%s::uuid[])) DESC,c.valid_at DESC,c.id
-                LIMIT %s
-                """,
-                (self.tenant_id, options.candidate_limit, self.tenant_id,
-                 seed_ids, seed_ids, options.candidate_limit),
-            ).fetchall()
+            tenant, unsafe_ids, degraded, cards, fts_card_ids, vector_card_ids = self._load_candidates(
+                conn, query, options, include_required=selected_ids is not None)
+            if expected_revision is not None and tenant['revision'] != expected_revision:
+                raise SnapshotInvalidated('memory changed during semantic selection; start a fresh recall')
             scored: list[tuple[float, dict]] = []
             for row in cards:
                 check_deadline()
@@ -113,6 +83,15 @@ class RecallCompiler:
                     scored.append((score, row))
             scored.sort(key=lambda item: (item[0], item[1]["valid_at"]), reverse=True)
             selected_rows = [row for _, row in scored[: options.final_limit]]
+            if selected_ids is not None:
+                by_id = {str(row['id']): row for row in cards if row['id'] not in unsafe_ids}
+                if any(card_id not in by_id for card_id in selected_ids):
+                    raise SnapshotInvalidated('selected memory is no longer a usable candidate')
+                # Current constraints remain in code; semantic relevance is not permission to suppress them.
+                required = [row for row in by_id.values() if self._required(row)]
+                required_ids = {str(row['id']) for row in required}
+                selected_rows = required + [by_id[card_id] for card_id in selected_ids if card_id not in required_ids]
+                selected_rows = selected_rows[:max(options.final_limit, len(required))]
             # Irrelevant or unsafe candidates must not fan out through evidence.
             source_map = self._source_map(conn, [row['id'] for row in selected_rows],
                                           limit=options.source_reference_limit)
@@ -126,8 +105,8 @@ class RecallCompiler:
                     source_map.get(row["id"], []),
                 )
 
-            projections = self._projection_cards(conn, query, set(cards_by_id), options, unsafe_ids)
-            mentions = self._mention_cards(conn, query, options)
+            projections = self._projection_cards(conn, query, set(cards_by_id), options, unsafe_ids, selected_only=selected_ids is not None)
+            mentions = self._mention_cards(conn, query, options) if selected_ids is None or cards_by_id else []
             current_evidence = self._evidence_cards(conn, current_evidence_ids)
             trace_summary = self._trace_summary(conn, list(cards_by_id))
 
@@ -187,6 +166,106 @@ class RecallCompiler:
                 ),
             )
             return self._json_safe(context)
+
+    def _load_candidates(self, conn, query, options, *, include_required=False):
+        tenant = conn.execute(
+            "SELECT revision FROM tenants WHERE id=%s",
+            (self.tenant_id,),
+        ).fetchone()
+        if not tenant:
+            raise NotFound("tenant not found")
+        degraded: list[str] = []
+        unsafe_ids = {
+            row["event_id"] for row in conn.execute(
+                """SELECT DISTINCT d.event_id FROM event_deltas d
+                JOIN semantic_cards c ON c.tenant_id=d.tenant_id AND c.id=d.event_id
+                WHERE d.tenant_id=%s AND d.state='pending'
+                  AND d.delta @> '{"requires_restructure": true}'::jsonb
+                  AND c.lifecycle IN ('active','provisional')""", (self.tenant_id,)
+            )
+        }
+        if unsafe_ids:
+            degraded.append("unsafe_events_not_caught_up")
+        if options.simulate_vector_timeout:
+            degraded.append("vector_candidate_timeout")
+
+        fts_card_ids = self._fts_card_ids(conn, query, options.candidate_limit)
+        vector_card_ids = self._vector_card_ids(conn, options, degraded)
+        required_ids = []
+        if include_required:
+            required_ids = [row['id'] for row in conn.execute(
+                f"""SELECT c.id FROM semantic_cards c
+                JOIN semantic_card_versions v ON v.tenant_id=c.tenant_id
+                  AND v.card_id=c.id AND v.version=c.current_version
+                WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
+                  AND ({EFFECTIVE_CURRENT_SQL} = 'true'::jsonb
+                    OR (c.card_type='fact' AND v.body @> '{{"safety_critical":true}}'::jsonb))
+                ORDER BY c.valid_at DESC,c.id LIMIT %s""",
+                (self.tenant_id, options.candidate_limit + 1))]
+            if len(required_ids) > options.candidate_limit:
+                raise RecallBudgetExceeded('required_memory_candidate_limit')
+        # Discovery seeds must enter the bounded canonical envelope, including
+        # dormant events outside recent history. Shared cap avoids a second list.
+        seed_ids = sorted(fts_card_ids | vector_card_ids | set(required_ids))
+        current_field = f", ({EFFECTIVE_CURRENT_SQL} = 'true'::jsonb) AS effective_current" if include_required else ""
+        cards = conn.execute(
+            f"""
+            WITH recent_ids AS (
+              SELECT id FROM semantic_cards
+              WHERE tenant_id=%s AND lifecycle IN ('active','provisional')
+              ORDER BY valid_at DESC,id LIMIT %s
+            )
+            SELECT c.*, v.body{current_field}
+            FROM semantic_cards c
+            JOIN semantic_card_versions v
+              ON v.tenant_id=c.tenant_id AND v.card_id=c.id AND v.version=c.current_version
+            WHERE c.tenant_id=%s AND c.lifecycle IN ('active','provisional')
+              AND (c.id=ANY(%s::uuid[]) OR c.id IN (SELECT id FROM recent_ids))
+            ORDER BY (c.id=ANY(%s::uuid[])) DESC,
+                     (c.id=ANY(%s::uuid[])) DESC,c.valid_at DESC,c.id
+            LIMIT %s
+            """,
+            (self.tenant_id, options.candidate_limit, self.tenant_id,
+             seed_ids, required_ids, seed_ids, options.candidate_limit),
+        ).fetchall()
+        return tenant, unsafe_ids, degraded, cards, fts_card_ids, vector_card_ids
+
+    @staticmethod
+    def _required(row):
+        return (row.get('effective_current', row['body'].get('current')) is True or
+                (row['card_type'] == 'fact' and row['body'].get('safety_critical') is True))
+
+    def compile_selected(self, query, *, current_evidence_ids, options):
+        """Read, judge without a transaction, then revalidate and compile a fresh snapshot."""
+        if self.selector is None:
+            raise ValueError('semantic selector is not configured')
+        if options.candidate_limit > 48:
+            raise RecallBudgetExceeded('semantic_candidate_count_limit')
+        with deadline_scope(options.timeout_ms, pending_delta_limit=options.pending_delta_limit,
+                            catch_up_target_limit=options.catch_up_target_limit,
+                            derived_input_limit=options.derived_input_limit):
+            with tenant_transaction(self.tenant_id, mode='read') as conn:
+                tenant, unsafe, _, rows, _, _ = self._load_candidates(conn, query, options, include_required=True)
+                revision = tenant['revision']
+                rows = [row for row in rows if row['id'] not in unsafe]
+                sources = self._source_map(conn, [row['id'] for row in rows], limit=options.source_reference_limit)
+                complete = [self._card_from_row(conn, row, sources.get(row['id'], [])) for row in rows]
+                candidates = self._json_safe([{key: card[key] for key in
+                    ('id', 'version', 'type', 'body', 'valid_at', 'lifecycle', 'epistemic_state')}
+                    for card in complete])
+                if wire_bytes(candidates) > 65_536:
+                    raise RecallBudgetExceeded('semantic_candidate_byte_limit')
+        # The transport owns a separate timeout. No SQL transaction or tenant lock spans inference.
+        allowed = {candidate['id'] for candidate in candidates}
+        selected = self.selector(query, deepcopy(candidates)) if candidates else []
+        if (not isinstance(selected, list) or any(not isinstance(item, str) for item in selected)
+                or len(selected) != len(set(selected)) or any(item not in allowed for item in selected)):
+            raise ValueError('semantic selector returned an unknown or duplicate candidate')
+        with deadline_scope(options.timeout_ms, pending_delta_limit=options.pending_delta_limit,
+                            catch_up_target_limit=options.catch_up_target_limit,
+                            derived_input_limit=options.derived_input_limit):
+            return self.compile(query, current_evidence_ids=current_evidence_ids, options=options,
+                                selected_ids=selected, expected_revision=revision)
 
     def _fit_context(self, layers, ordered_layers, degraded, snapshot_id, revision, options):
         originals = []
@@ -402,6 +481,7 @@ class RecallCompiler:
         selected_card_ids: set[UUID],
         options: RecallOptions,
         unsafe_ids: set[UUID],
+        *, selected_only: bool = False,
     ) -> list[dict[str, Any]]:
         rows = conn.execute(
             """
@@ -426,7 +506,7 @@ class RecallCompiler:
         for row in rows:
             if row['unsafe_support']:
                 continue
-            if not row['selected_support'] and self._relevance(query, row["body"]) <= 0:
+            if not row['selected_support'] and (selected_only or self._relevance(query, row["body"]) <= 0):
                 continue
             family = row["projection_type"]
             if family_counts.get(family, 0) >= options.per_relation_family_limit:

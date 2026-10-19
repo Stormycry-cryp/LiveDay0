@@ -82,7 +82,14 @@ def test_s1_dinner_traces_gain_later_meaning(service):
     assert [card["id"] for card in context["layers"]["events"]] == [str(event_id)]
     assert [card["id"] for card in context["layers"]["open_future"]] == [str(future_id)]
     assert len(context["layers"]["active_threads"]) == 1
-    summary = context["layers"]["evidence_summary"][0]
+    # The complete trace set exceeds the default whole-card budget. Its pinned
+    # expansion must retain all sources and observation boundaries.
+    summaries = context["layers"]["evidence_summary"]
+    if summaries:
+        summary = summaries[0]
+    else:
+        handle = next(item for item in context["expansion_handles"] if item["type"] == "evidence_summary")
+        summary = service.expand_snapshot(UUID(context["snapshot"]["id"]), UUID(handle["item_id"]))
     assert summary["count"] == 20
     assert "不能证明当时无人陪伴" in flatten_context(summary)
     assert not context["layers"]["current_evidence"]

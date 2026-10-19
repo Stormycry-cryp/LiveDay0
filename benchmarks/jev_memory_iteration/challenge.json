@@ -1,0 +1,533 @@
+{
+  "schema": "jev-memory-iteration-cases.v1",
+  "split": "challenge",
+  "frozen_at": "2026-10-19",
+  "provenance": "New fictional Chinese material, authored for this finite evaluation; no historical user data.",
+  "cases": [
+    {
+      "id": "c01",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "b34f0521-ff85-5666-b1e1-ed0e2698c341",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 51,
+          "content_digest": "sha256:a27a62dce4cdfea765c52d6c5a7ba57d188fe7db3af7b324df9a985d02f2b462"
+        },
+        "content": "今天部门正式任命我为新小组负责人，我接受了。我第一次需要负责四个人的成长，接下来每周要安排一对一沟通。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "96efb5af-d504-505a-8fa9-7c039cdbfbb6",
+        "source": {
+          "source_id": "b34f0521-ff85-5666-b1e1-ed0e2698c341",
+          "source_version": "v1",
+          "content_digest": "sha256:a27a62dce4cdfea765c52d6c5a7ba57d188fe7db3af7b324df9a985d02f2b462",
+          "span": {
+            "start": 0,
+            "end": 51,
+            "digest": "sha256:a27a62dce4cdfea765c52d6c5a7ba57d188fe7db3af7b324df9a985d02f2b462"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "本次接受小组负责人任命"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "dc164fe8-f12e-5479-a722-32357d9c668d"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "接受部门新小组负责人任命",
+            "current_result": "我今天已接受任命，开始负责四人的成长",
+            "unfinished_future": "接下来每周安排一对一沟通"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "dc164fe8-f12e-5479-a722-32357d9c668d",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "work_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c02",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "54c60971-8f61-56fc-a131-9edb537bf04b",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 54,
+          "content_digest": "sha256:018403382b41f38d9c1688a06330c338267218cd5f4a1c57b4c5b431effcff65"
+        },
+        "content": "昨天我和安宁因为展会分工谈不拢。今天我们继续谈同一场展会，最后约定她管现场、我管对外联络，之前的分歧解决了。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "34313cf9-f0e6-5bcf-a302-d6d04c48ea7b",
+        "source": {
+          "source_id": "54c60971-8f61-56fc-a131-9edb537bf04b",
+          "source_version": "v1",
+          "content_digest": "sha256:018403382b41f38d9c1688a06330c338267218cd5f4a1c57b4c5b431effcff65",
+          "span": {
+            "start": 0,
+            "end": 54,
+            "digest": "sha256:018403382b41f38d9c1688a06330c338267218cd5f4a1c57b4c5b431effcff65"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "与安宁协商这次展会分工的进展"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "be2c9824-8466-543c-8a36-14c75aeca911"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "解决昨天与安宁就同一展会的分工分歧",
+            "current_result": "今天约定她管现场、我管对外联络，分歧解决"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "be2c9824-8466-543c-8a36-14c75aeca911",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "7082281c-4906-525d-9db2-d896eabc1150",
+          "version": 2,
+          "type": "event",
+          "body": {
+            "goal_context": "昨天与安宁讨论这次展会分工",
+            "current_result": "双方尚未谈妥"
+          },
+          "valid_at": "2026-10-19T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "existing_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": "7082281c-4906-525d-9db2-d896eabc1150",
+        "groups": [
+          "positive_event",
+          "work_event",
+          "existing_event"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c03",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "0cb0f624-d35b-5b11-843a-807184335ffc",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 34,
+          "content_digest": "sha256:1bbc6f96fe01aeaae21d8fc188c759b36c70c4334e9d8ae819e87c3df242b64b"
+        },
+        "content": "今晚我洗好碗，把窗台的绿萝浇了水，坐着听了十分钟雨声，就准备睡觉了。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "2bac0a44-53ad-5659-ae0c-2c104992d467",
+        "source": {
+          "source_id": "0cb0f624-d35b-5b11-843a-807184335ffc",
+          "source_version": "v1",
+          "content_digest": "sha256:1bbc6f96fe01aeaae21d8fc188c759b36c70c4334e9d8ae819e87c3df242b64b",
+          "span": {
+            "start": 0,
+            "end": 34,
+            "digest": "sha256:1bbc6f96fe01aeaae21d8fc188c759b36c70c4334e9d8ae819e87c3df242b64b"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今晚睡前的普通片刻"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "84e2e90c-4c4f-5c2c-9b9f-cc0ca3f533ee"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "今晚在家睡前的日常",
+            "current_result": "洗碗、浇绿萝，听十分钟雨声后准备睡觉"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "84e2e90c-4c4f-5c2c-9b9f-cc0ca3f533ee",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "trace_only",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "trace"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c04",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "4b0cfc27-61ca-5b52-a9c7-d1d1bf327ee0",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 59,
+          "content_digest": "sha256:d3eb2f66ec6d881d4c07927980912f34bdbb161487c102ff574b7995244229c0"
+        },
+        "content": "资料里的示例公司规定：采购订单超过两万元需要两级审批，审批接口使用 JSON。这里是流程文档说明，没有讲我的工作经历。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "f663f6b9-7dc3-510a-8019-5d8d7e9d57b9",
+        "source": {
+          "source_id": "4b0cfc27-61ca-5b52-a9c7-d1d1bf327ee0",
+          "source_version": "v1",
+          "content_digest": "sha256:d3eb2f66ec6d881d4c07927980912f34bdbb161487c102ff574b7995244229c0",
+          "span": {
+            "start": 0,
+            "end": 59,
+            "digest": "sha256:d3eb2f66ec6d881d4c07927980912f34bdbb161487c102ff574b7995244229c0"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "采购审批文档示例"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "dad76ab4-fdbe-5b97-9f48-ffb8398d0196"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "描述示例公司的采购审批流程",
+            "current_result": "超过两万元需要两级审批，接口使用 JSON"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "dad76ab4-fdbe-5b97-9f48-ffb8398d0196",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "outside_scope",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "outside"
+        ],
+        "safety_assertion": null
+      }
+    },
+    {
+      "id": "c05",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "36e8434e-40f3-5fdb-a8bf-774a71f4b304",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 38,
+          "content_digest": "sha256:00592aa2a04b8a7509fdc2ddb9a9a1bb384263d06700ded9083f751c864a6bd6"
+        },
+        "content": "我今天没通过内部转岗面试，人事明确说这次申请被拒绝了，我还是留在原来的岗位。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "a018d446-d130-5b4f-92be-d99fbc89534b",
+        "source": {
+          "source_id": "36e8434e-40f3-5fdb-a8bf-774a71f4b304",
+          "source_version": "v1",
+          "content_digest": "sha256:00592aa2a04b8a7509fdc2ddb9a9a1bb384263d06700ded9083f751c864a6bd6",
+          "span": {
+            "start": 0,
+            "end": 38,
+            "digest": "sha256:00592aa2a04b8a7509fdc2ddb9a9a1bb384263d06700ded9083f751c864a6bd6"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天内部转岗申请结果"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "d15fce93-34cd-5d3c-a1c8-6dcbde4444b0"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "申请内部转岗",
+            "current_result": "今天通过面试，已被录用到新岗位"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "d15fce93-34cd-5d3c-a1c8-6dcbde4444b0",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [],
+      "expected": {
+        "primary_route": "needs_review",
+        "source_support_allowed": [
+          "contradicted"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "forbidden_write"
+        ],
+        "safety_assertion": "原文明确拒绝转岗，提案声称已录用，必须拒写。"
+      }
+    },
+    {
+      "id": "c06",
+      "synthetic": true,
+      "request": {
+        "schema_version": "semantic-extraction-request.v1",
+        "source": {
+          "source_id": "85e559b6-6b0d-5497-bdbb-93aa53b71267",
+          "source_version": "v1",
+          "source_kind": "conversation",
+          "authority": "user",
+          "sensitivity": "ordinary",
+          "chunk_start": 0,
+          "chunk_end": 50,
+          "content_digest": "sha256:c108a9e7c45e6cf9525a4dfccbcd9065e1b546f9dd554bf5042ae3177052d780"
+        },
+        "content": "去年三月我第一次独自去海边露营。今天的这次露营是另一次出行：我和妹妹一起去了山里，遇到大雨提前回家。",
+        "occurred_at": "2026-10-19T02:00:00+00:00",
+        "max_proposals": 1
+      },
+      "proposal": {
+        "schema_version": "semantic-proposal.v1",
+        "proposal_id": "af5049c6-718d-5558-8d3d-1901ddf0d87f",
+        "source": {
+          "source_id": "85e559b6-6b0d-5497-bdbb-93aa53b71267",
+          "source_version": "v1",
+          "content_digest": "sha256:c108a9e7c45e6cf9525a4dfccbcd9065e1b546f9dd554bf5042ae3177052d780",
+          "span": {
+            "start": 0,
+            "end": 50,
+            "digest": "sha256:c108a9e7c45e6cf9525a4dfccbcd9065e1b546f9dd554bf5042ae3177052d780"
+          }
+        },
+        "speaker": "user",
+        "subject": {
+          "kind": "user",
+          "identifier": "synthetic-user"
+        },
+        "speech_mode": "direct_statement",
+        "semantic_category": "event",
+        "scope": {
+          "persistence": "situational",
+          "applies_to": "今天与妹妹到山里露营遇雨返程"
+        },
+        "confidence": 0.95,
+        "epistemic_state": "asserted",
+        "privacy_class": "ordinary",
+        "persistence_intent": "implicit_candidate",
+        "revision": {
+          "intent": "create",
+          "key": "3857b2eb-a0c0-5a09-a340-19e66aaa3c02"
+        },
+        "producer": {
+          "producer_id": "fixed-synthetic-fixture",
+          "model_id": "not-generated",
+          "extractor_version": "1.0.0",
+          "policy_version": "1.0.0"
+        },
+        "semantic_input": {
+          "card_type": "event",
+          "body": {
+            "goal_context": "今天与妹妹一起到山里露营",
+            "current_result": "遇到大雨，提前回家",
+            "boundaries": "不同于去年三月独自去海边的那次露营"
+          },
+          "lifecycle": "active",
+          "epistemic_state": "confirmed",
+          "canonical_key": "3857b2eb-a0c0-5a09-a340-19e66aaa3c02",
+          "valid_at": "2026-10-19T02:00:00+00:00"
+        }
+      },
+      "candidates": [
+        {
+          "id": "bd00d249-731d-5fc3-ac8c-6b36bc579e6a",
+          "version": 2,
+          "type": "event",
+          "body": {
+            "goal_context": "去年三月第一次独自去海边露营",
+            "current_result": "完成独自露营"
+          },
+          "valid_at": "2025-03-08T02:00:00+00:00",
+          "lifecycle": "active",
+          "epistemic_state": "confirmed"
+        }
+      ],
+      "expected": {
+        "primary_route": "new_event",
+        "source_support_allowed": [
+          "supported"
+        ],
+        "candidate_id": null,
+        "groups": [
+          "positive_event",
+          "new_event"
+        ],
+        "safety_assertion": null
+      }
+    }
+  ]
+}

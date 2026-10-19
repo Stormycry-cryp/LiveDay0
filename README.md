@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](./pyproject.toml)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](./migrations/001_initial.up.sql)
-[![Tests](https://img.shields.io/badge/Tests-19_passed-10B981?style=for-the-badge)](./docs/benchmarks/v1-local-baseline.md)
+[![Portable tests](https://img.shields.io/badge/Portable_tests-628_passed-10B981?style=for-the-badge)](./docs/v1-design/jev-memory-iteration.md)
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular_Monolith-8B5CF6?style=flat-square)
 ![Isolation](https://img.shields.io/badge/Isolation-PostgreSQL_RLS-2563EB?style=flat-square)
@@ -66,6 +66,8 @@ flowchart LR
 | [`core.py`](./src/liveday0/core.py) | 接收证据，维护规范卡片和事件增量，传播纠正与删除 |
 | [`maintenance.py`](./src/liveday0/maintenance.py) | 标记待维护目标，合并任务，校验版本，处理重试和原子替换 |
 | [`recall.py`](./src/liveday0/recall.py) | 固定快照，发现候选，展开类型化关系，按规范身份去重并控制上下文大小 |
+| [`judgments.py`](./src/liveday0/judgments.py) / [`jev.py`](./src/liveday0/jev.py) | 代码构造有限问题和选项，调用可选的 Jev 分类、事件归属、来源支持与召回相关性判断 |
+| [`observation_pipeline.py`](./src/liveday0/observation_pipeline.py) | 组合来源绑定提取与判断，复核快照后原子保存或返回待审阅 |
 | [`migrations.py`](./src/liveday0/migrations.py) | 执行成对 SQL 迁移并查询状态 |
 | [`cli.py`](./src/liveday0/cli.py) | 提供本地开发和验收入口 |
 
@@ -155,7 +157,9 @@ uv run liveday0 recall "$TENANT_ID" "花生 饮食"
 
 召回默认完整包16384 bytes、800ms协作式执行预算；完整展开默认65536 bytes。超限有静态错误/退出码，省略卡保留可调用句柄；具体配置、出处保护、连接地址要求与墙钟限制见[返回包与执行预算](./docs/v1-design/recall-return-limits.md)。
 
-v1 没有内置模型 provider。调用方负责提出范围明确的语义内容或派生视图替代主体，内核负责检查来源、租户、版本、生命周期和依赖。模型因此不会拿到没有边界的数据库写权限。
+可选的 [Jev 记忆判断接入](./docs/v1-design/jev-memory-decisions.md)将分类、事件归属、来源支持和召回选择交给 BeatAPI Jev，代码生成中文问题和选项，直接采用概率最高的结果。工作经历属于生活事件，普通日常可保留轻量痕迹。默认 CLI 仍使用原有路径；宿主显式配置 `MemoryJudgments` 后可使用 `capture` 与语义召回。生成式提取器仍由宿主提供，有限虚构材料的实际结果及未确认范围见 [自迭代验证](./docs/v1-design/jev-memory-iteration.md)。
+
+调用方负责提出范围明确的语义内容或派生视图替代主体，内核检查来源、租户、版本、生命周期和依赖；保存授权、删除和数据库写入继续由代码控制。
 
 ### 纠正、删除和维护
 

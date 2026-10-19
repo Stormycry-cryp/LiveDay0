@@ -31,11 +31,19 @@ CARD_REQUIRED_FIELDS: dict[str, set[str]] = {
 class MemoryService:
     """Tenant-scoped application service; canonical objects have no generic CRUD API."""
 
-    def __init__(self, tenant_id: UUID, *, explicit_save_authorizer=None):
+    def __init__(self, tenant_id: UUID, *, explicit_save_authorizer=None, judgments=None):
         self.tenant_id = tenant_id
         self.maintenance = MaintenanceEngine(tenant_id)
-        self.recall_compiler = RecallCompiler(tenant_id)
+        self.judgments = judgments
+        self.recall_compiler = RecallCompiler(tenant_id, selector=judgments.rank_recall_candidates if judgments else None)
         self.interpretations = InterpretationEngine(self, explicit_save_authorizer)
+
+    def capture(self, request, *, extractor):
+        """Capture through explicitly configured semantic judgments."""
+        if self.judgments is None:
+            raise ValueError("capture requires configured judgments or an explicit ObservationPipeline")
+        from liveday0.observation_pipeline import ObservationPipeline
+        return ObservationPipeline(self, extractor, self.judgments).capture(request)
 
     def ensure_tenant(self) -> UUID:
         with tenant_transaction(self.tenant_id, mode="bootstrap") as conn:
@@ -316,78 +324,88 @@ class MemoryService:
         delta: dict[str, Any],
         *,
         idempotency_key: str,
+        expected_version: int | None = None,
     ) -> dict[str, Any]:
         delta = deepcopy(delta)
         prepared = self._prepare_observation(evidence, None, ())
         if not isinstance(idempotency_key, str):
             raise ValueError("delta idempotency_key must be a string")
-        frozen_delta = canonical_json(delta)
         if not delta:
             raise ValueError("delta cannot be empty")
         if "requires_restructure" in delta and not isinstance(delta["requires_restructure"], bool):
             raise ValueError("requires_restructure must be a boolean")
         with tenant_transaction(self.tenant_id) as conn:
-            event = self._get_card(conn, event_id, for_update=True)
-            observed = self._observe_conn(conn, *prepared)
-            self._require_evidence(conn, observed["evidence_id"])
-            if event["card_type"] != "event":
-                raise ValueError("event deltas can only target events")
-            delta_fingerprint = fingerprint(canonical_json({
-                "contract": "liveday0:event-delta:v1", "tenant_id": self.tenant_id,
-                "event_id": event_id, "evidence_id": observed["evidence_id"],
-                "idempotency_key": idempotency_key, "delta": frozen_delta,
-            }))
+            return self._add_event_delta_conn(conn, event_id, prepared, delta,
+                idempotency_key=idempotency_key, expected_version=expected_version)
+
+    def _add_event_delta_conn(self, conn, event_id, prepared, delta, *, idempotency_key, expected_version=None):
+        frozen_delta = canonical_json(delta)
+        event = self._get_card(conn, event_id, for_update=True)
+        if expected_version is not None:
+            if type(expected_version) is not int or expected_version < 1:
+                raise ValueError("expected_version must be a positive integer")
+            if event["current_version"] != expected_version:
+                raise VersionConflict("event changed after assignment")
+        observed = self._observe_conn(conn, *prepared)
+        self._require_evidence(conn, observed["evidence_id"])
+        if event["card_type"] != "event":
+            raise ValueError("event deltas can only target events")
+        delta_fingerprint = fingerprint(canonical_json({
+            "contract": "liveday0:event-delta:v1", "tenant_id": self.tenant_id,
+            "event_id": event_id, "evidence_id": observed["evidence_id"],
+            "idempotency_key": idempotency_key, "delta": frozen_delta,
+        }))
+        row = conn.execute(
+            """
+            INSERT INTO event_deltas(
+              tenant_id, event_id, evidence_id, delta, idempotency_key, request_fingerprint
+            ) VALUES (%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (tenant_id, event_id, idempotency_key) DO NOTHING
+            RETURNING id
+            """,
+            (self.tenant_id, event_id, observed["evidence_id"], Jsonb(delta), idempotency_key, delta_fingerprint),
+        ).fetchone()
+        created = row is not None
+        if not created:
             row = conn.execute(
-                """
-                INSERT INTO event_deltas(
-                  tenant_id, event_id, evidence_id, delta, idempotency_key, request_fingerprint
-                ) VALUES (%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (tenant_id, event_id, idempotency_key) DO NOTHING
-                RETURNING id
-                """,
-                (self.tenant_id, event_id, observed["evidence_id"], Jsonb(delta), idempotency_key, delta_fingerprint),
+                """SELECT id, request_fingerprint FROM event_deltas
+                WHERE tenant_id=%s AND event_id=%s AND idempotency_key=%s""",
+                (self.tenant_id, event_id, idempotency_key),
             ).fetchone()
-            created = row is not None
-            if not created:
-                row = conn.execute(
-                    """SELECT id, request_fingerprint FROM event_deltas
-                    WHERE tenant_id=%s AND event_id=%s AND idempotency_key=%s""",
-                    (self.tenant_id, event_id, idempotency_key),
-                ).fetchone()
-                if row["request_fingerprint"] is None:
-                    raise IdempotencyConflict("legacy delta key has no frozen request fingerprint")
-                if row["request_fingerprint"] != delta_fingerprint:
-                    raise IdempotencyConflict("delta key was already used for a different source or payload")
-            if created:
-                conn.execute(
-                    """
-                    INSERT INTO card_sources(tenant_id, card_id, evidence_id, source_role)
-                    VALUES (%s,%s,%s,'support') ON CONFLICT DO NOTHING
-                    """,
-                    (self.tenant_id, event_id, observed["evidence_id"]),
-                )
-                pending_count = conn.execute(
-                    """
-                    SELECT count(*) AS n FROM event_deltas
-                    WHERE tenant_id=%s AND event_id=%s AND state='pending'
-                    """,
-                    (self.tenant_id, event_id),
-                ).fetchone()["n"]
-                delay_seconds = 0 if pending_count >= event_delta_soft_limit() else event_quiet_seconds()
-                self._enqueue_job_conn(
-                    conn,
-                    job_type="event_rewrite",
-                    target_kind="semantic_card",
-                    target_id=event_id,
-                    coalesce_key=f"event_rewrite:{event_id}",
-                    baseline_version=event["current_version"],
-                    available_after_seconds=delay_seconds,
-                )
-                self._invalidate_projections(conn, event_id)
-                if delta.get("requires_restructure"):
-                    self._hard_invalidate_snapshots(conn)
-                self._bump_revision(conn)
-            return {"delta_id": row["id"], "created": created}
+            if row["request_fingerprint"] is None:
+                raise IdempotencyConflict("legacy delta key has no frozen request fingerprint")
+            if row["request_fingerprint"] != delta_fingerprint:
+                raise IdempotencyConflict("delta key was already used for a different source or payload")
+        if created:
+            conn.execute(
+                """
+                INSERT INTO card_sources(tenant_id, card_id, evidence_id, source_role)
+                VALUES (%s,%s,%s,'support') ON CONFLICT DO NOTHING
+                """,
+                (self.tenant_id, event_id, observed["evidence_id"]),
+            )
+            pending_count = conn.execute(
+                """
+                SELECT count(*) AS n FROM event_deltas
+                WHERE tenant_id=%s AND event_id=%s AND state='pending'
+                """,
+                (self.tenant_id, event_id),
+            ).fetchone()["n"]
+            delay_seconds = 0 if pending_count >= event_delta_soft_limit() else event_quiet_seconds()
+            self._enqueue_job_conn(
+                conn,
+                job_type="event_rewrite",
+                target_kind="semantic_card",
+                target_id=event_id,
+                coalesce_key=f"event_rewrite:{event_id}",
+                baseline_version=event["current_version"],
+                available_after_seconds=delay_seconds,
+            )
+            self._invalidate_projections(conn, event_id)
+            if delta.get("requires_restructure"):
+                self._hard_invalidate_snapshots(conn)
+            self._bump_revision(conn)
+        return {"delta_id": row["id"], "created": created}
 
     def effective_event(self, event_id: UUID) -> dict[str, Any]:
         with tenant_transaction(self.tenant_id, mode="read") as conn:
@@ -884,9 +902,13 @@ class MemoryService:
             if len(current_ids) > options.candidate_limit:
                 raise RecallBudgetExceeded('current_evidence_reference_limit')
             self.maintenance.catch_up_unsafe_overlays()
-            return self.recall_compiler.compile(
-                query, current_evidence_ids=current_ids, options=options,
-            )
+            if self.recall_compiler.selector is None:
+                return self.recall_compiler.compile(
+                    query, current_evidence_ids=current_ids, options=options,
+                )
+        return self.recall_compiler.compile_selected(
+            query, current_evidence_ids=current_ids, options=options,
+        )
 
     def expand_snapshot(self, snapshot_id: UUID, item_id: UUID,
                         *, options: RecallOptions | None = None) -> dict[str, Any]:

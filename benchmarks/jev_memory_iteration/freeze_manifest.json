@@ -1,0 +1,30 @@
+{
+  "schema": "jev-memory-iteration-freeze.v1",
+  "sha256": {
+    "dev": "5b728bc2a0a09c30731747774bad382b1853d42240dab97daaca0a7e73d455ba",
+    "challenge": "371c591fe9484d9f336a680a5cad951bf26202d01927dff2728f44fdc8a42088",
+    "challenge_v2": "1f2346f93e902d3a6b4bc89c4345d9ec0d8b4533f19d640360f7c2eb58a7e09e"
+  },
+  "dev_max_modification_rounds": 2,
+  "challenge_max_live_runs": 1,
+  "static_fixture_erratum": {
+    "before_any_challenge_model_call": true,
+    "split": "challenge",
+    "previous_sha256": "d8b055df5e994c7f0085afe9b2d7f83c43603f32d2f9de5f960620b253ac471a",
+    "reason": "Corrected an inconsistent relative-month phrase in source and corresponding body; no model response inspected, labels unchanged."
+  },
+  "challenge_version_policy": {
+    "max_live_runs_per_version": 1,
+    "challenge": {
+      "consumed": true,
+      "reported_raw_correct": 4,
+      "reported_total": 6,
+      "provenance": "Root agent reported completed round-1 live evaluation; original report remains authoritative."
+    },
+    "challenge_v2": {
+      "consumed": false,
+      "purpose": "Prospective new validation after round 2, never a replacement for challenge v1."
+    }
+  },
+  "live_phase": "round_2_only"
+}
